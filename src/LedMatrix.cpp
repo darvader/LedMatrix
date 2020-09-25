@@ -60,9 +60,11 @@ uint16_t myGREEN = display.color565(0, 255, 0);
 uint16_t myBLUE = display.color565(0, 0, 255);
 uint16_t myWHITE = display.color565(255, 255, 255);
 uint16_t myYELLOW = display.color565(255, 255, 0);
+uint16_t myOrange = display.color565(255, 127, 0);
 uint16_t myCYAN = display.color565(0, 255, 255);
 uint16_t myMAGENTA = display.color565(255, 0, 255);
 uint16_t myBLACK = display.color565(0, 0, 0);
+uint16_t timeoutColor = display.color565(0, 50, 50);
 
 uint16_t myCOLORS[8]={myRED,myGREEN,myBLUE,myWHITE,myYELLOW,myCYAN,myMAGENTA,myBLACK};
 
@@ -78,13 +80,16 @@ uint8_t static weather_icons[]={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x20,0x00,0x0
   ,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0xff,0xe0,0xff,0xe0,0xff,0xe0,0xff,0xe0,0xff,0xe0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x20,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
 };
 
-int pointsLeft = 21;
-int pointsRight = 25;
-int setsLeft = 2;
+int pointsLeft = 0;
+int pointsRight = 0;
+int setsLeft = 0;
 int setsRight = 0;
 
 boolean teamLeftServes = false;
 char timeout = 0;  // 0 no time-out; 1 time-out left; 2 time-out right
+char scrollingText[512] = "VSV Jena 90 e.V. : Gastmannschaft";
+int timeoutStart = 0;
+boolean timeoutOn = false;
 
 #ifdef ESP8266
 // ISR for display refresh
@@ -146,11 +151,12 @@ const int ESP_BUILTIN_LED = 2;
 
 
 WiFiUDP Udp;
+WiFiUDP UdpNtp;
 
 const long utcOffsetInSeconds = 60*60*2;
-NTPClient timeClient(Udp, "pool.ntp.org", utcOffsetInSeconds);
+NTPClient timeClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds);
 unsigned int localUdpPort = 4210;
-char incomingPacket[255];
+char incomingPacket[1024];
 char replyPacket[] = "LedMatrix";
 IPAddress masterIp;
 int mode = 1;
@@ -179,9 +185,6 @@ void setup() {
   display_update_enable(true);
   display.setDriverChip(FM6124);
   display.showBuffer();
-
-  // delay(3000);
-
 
   setupWifiUpdate();
   setupUdp();
@@ -282,19 +285,14 @@ void sample () {
 
 void receiveUdp() {
   int packetSize = Udp.parsePacket();
-  //Serial.println("In Loop");
-  //delay(1000);
+
   if (packetSize)
   {
-    // receive incoming UDP packets
-    // Serial.printf("Received %d bytes from %s, port %d\n", packetSize, Udp.remoteIP().toString().c_str(), Udp.remotePort());
     int len = Udp.read(incomingPacket, 255);
     if (len > 0)
     {
       incomingPacket[len] = 0;
     }
-    // WebSerial.print("UDP packet contents: ");
-    // WebSerial.println(incomingPacket);
 
     if (std::strcmp(incomingPacket,"Detect") == 0) {
       // send back a reply, to the IP address and port we got the packet from
@@ -302,6 +300,7 @@ void receiveUdp() {
       Udp.beginPacket(masterIp, 4445);
       Udp.write(replyPacket);
       Udp.endPacket();
+      Serial.println("Detect received.");
       return;
     }
     if (strstr(incomingPacket,"pointsLeft=") != NULL) {
@@ -324,6 +323,29 @@ void receiveUdp() {
       setsRight = incomingPacket[10];
       return;
     }
+    if (strstr(incomingPacket,"updateScore=") != NULL) {
+      pointsLeft = incomingPacket[12];
+      pointsRight = incomingPacket[13];
+      setsLeft = incomingPacket[14];
+      setsRight = incomingPacket[15];
+      teamLeftServes = incomingPacket[16];
+      return;
+    } 
+    if (strstr(incomingPacket,"scrollText=") != NULL) {
+      int j = 0;
+      for (int i = 11; incomingPacket[i] != 0; i++) {
+        scrollingText[j++] = incomingPacket[i];
+      }
+      scrollingText[j] = 0;
+      Serial.println(scrollingText);
+      return;
+    }
+    if (strstr(incomingPacket,"timeout") != NULL) {
+      timeoutStart = millis();
+      timeoutOn = true;
+    }
+
+
     if (strstr(incomingPacket,"timeOut=") != NULL) {
       timeout = incomingPacket[8];
       return;
@@ -374,18 +396,15 @@ void showScore() {
   display.setTextSize(1);
   display.setTextColor(myRED);
   display.print(setsLeft);
-  display.setCursor(58, 15);
+  display.setCursor(59, 15);
   display.print(setsRight);
 
   if (teamLeftServes) {
-    display.fillCircle(14, 18, 3, myYELLOW); 
+    display.fillCircle(11, 18, 3, myYELLOW); 
   } else {
     display.fillCircle(51, 18, 3, myYELLOW); 
   }
 }
-
-
-char scrollingText[255] = "VSV Jena 90 e.V. : SVC Nordhausen";
 
 void showScrollingText() {
   static int textX = 0;
@@ -399,24 +418,42 @@ void showScrollingText() {
 }
 
 void showTime() {
+  timeClient.update();
+
   display.setTextSize(1);
   display.setFont(&Picopixel);
-  display.setTextColor(myBLUE);
-  display.setCursor(17, 20);
+  display.setTextColor(myMAGENTA);
+  display.setCursor(18, 20);
   display.printf("%02d:%02d:%02d", timeClient.getHours(), timeClient.getMinutes(), timeClient.getSeconds());
   display.setFont();
+}
+
+void timeOut() {
+  int secs = millis() - timeoutStart;
+  if (secs > 30000) {
+    timeoutOn = false;
+  }
+  int width = secs/30000.0 * 64;
+  display.fillRect(0, 24, width,8, timeoutColor);
+
+  display.setTextColor(myOrange);
+  display.setCursor(4, 25);
+  display.printf("T-Out:%ds", 30-(secs/1000));
 }
 
 void scoreBoard() {
   display.clearDisplay();
   showScore();
-  showScrollingText();
+  if (timeoutOn) 
+    timeOut();
+  else
+    showScrollingText();
   showTime();
   display.showBuffer();
 }
 
 // do something usefull instead of just waiting
-void myDelay(long millisecs) {
+void myDelay(ulong millisecs) {
   long time = millis();
   while (millis() - time < millisecs) {
     ArduinoOTA.handle();
@@ -426,7 +463,6 @@ void myDelay(long millisecs) {
 }
 
 void loop() {
-  timeClient.update();
   switch (mode)
   {
   case 1:
