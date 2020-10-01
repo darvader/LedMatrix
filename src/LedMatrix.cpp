@@ -90,6 +90,7 @@ char timeout = 0;  // 0 no time-out; 1 time-out left; 2 time-out right
 char scrollingText[512] = "VSV Jena 90 e.V. : Gastmannschaft";
 int timeoutStart = 0;
 boolean timeoutOn = false;
+boolean off = false;
 
 #ifdef ESP8266
 // ISR for display refresh
@@ -283,6 +284,38 @@ void sample () {
 
 }
 
+void detect() {
+  // send back a reply, to the IP address and port we got the packet from
+  masterIp = Udp.remoteIP();
+  Udp.beginPacket(masterIp, 4445);
+  Udp.write(replyPacket);
+  Udp.endPacket();
+  Serial.println("Detect received.");
+}
+
+void displayOff() {
+  off = true;
+  display.clearDisplay();
+  display.showBuffer();
+}
+
+void updateScore() {
+  pointsLeft = incomingPacket[12];
+  pointsRight = incomingPacket[13];
+  setsLeft = incomingPacket[14];
+  setsRight = incomingPacket[15];
+  teamLeftServes = incomingPacket[16];
+}
+
+void updateScrollingText() {
+  int j = 0;
+  for (int i = 11; incomingPacket[i] != 0; i++) {
+    scrollingText[j++] = incomingPacket[i];
+  }
+  scrollingText[j] = 0;
+  Serial.println(scrollingText);
+}
+
 void receiveUdp() {
   int packetSize = Udp.parsePacket();
 
@@ -295,14 +328,14 @@ void receiveUdp() {
     }
 
     if (std::strcmp(incomingPacket,"Detect") == 0) {
-      // send back a reply, to the IP address and port we got the packet from
-      masterIp = Udp.remoteIP();
-      Udp.beginPacket(masterIp, 4445);
-      Udp.write(replyPacket);
-      Udp.endPacket();
-      Serial.println("Detect received.");
+      detect();
       return;
     }
+    if (strstr(incomingPacket,"off") != NULL) {
+      displayOff();
+      return;
+    } else off = false;
+
     if (strstr(incomingPacket,"pointsLeft=") != NULL) {
       pointsLeft = incomingPacket[11];
       return;
@@ -324,30 +357,32 @@ void receiveUdp() {
       return;
     }
     if (strstr(incomingPacket,"updateScore=") != NULL) {
-      pointsLeft = incomingPacket[12];
-      pointsRight = incomingPacket[13];
-      setsLeft = incomingPacket[14];
-      setsRight = incomingPacket[15];
-      teamLeftServes = incomingPacket[16];
+      updateScore();
       return;
     } 
     if (strstr(incomingPacket,"scrollText=") != NULL) {
-      int j = 0;
-      for (int i = 11; incomingPacket[i] != 0; i++) {
-        scrollingText[j++] = incomingPacket[i];
-      }
-      scrollingText[j] = 0;
-      Serial.println(scrollingText);
+      updateScrollingText();
       return;
     }
-    if (strstr(incomingPacket,"timeout") != NULL) {
+    if (std::strcmp(incomingPacket,"timeout") == 0) {
       timeoutStart = millis();
       timeoutOn = true;
+      return;
     }
-
-
-    if (strstr(incomingPacket,"timeOut=") != NULL) {
-      timeout = incomingPacket[8];
+    if (std::strcmp(incomingPacket,"time1") == 0) {
+      mode = 2;
+      return;
+    }
+    if (std::strcmp(incomingPacket,"time2") == 0) {
+      mode = 3;
+      return;
+    }
+    if (std::strcmp(incomingPacket,"time3") == 0) {
+      mode = 4;
+      return;
+    }
+    if (std::strcmp(incomingPacket,"scoreboard") == 0) {
+      mode = 1;
       return;
     }
 
@@ -356,8 +391,22 @@ void receiveUdp() {
   }
 }
 
+struct line_t {
+  uint16_t color;
+  int16_t x1, x2, y1, y2;
+  double arc;
+  int degree;
+};
 
-void timeSample() {
+void drawTimeWithBackground() {
+  display.fillRect(10, 11, 47, 7, myBLACK);
+  display.setTextSize(1);
+  display.setCursor(10,11);
+  display.setTextColor(myMAGENTA);
+  display.printf("%02d:%02d:%02d", timeClient.getHours(), timeClient.getMinutes(), timeClient.getSeconds());
+}
+
+void timeSample1() {
   static int x = 0;
   static int y = 0;
   static int stepX = 1;
@@ -367,23 +416,112 @@ void timeSample() {
   if (x == 0) stepX = 1;
   if (y == 31) stepY = -1;
   if (y == 0) stepY = 1;
+
+  display.clearDisplay();
   
-  display.setTextSize(1);
-  display.setCursor(3,0);
 
   display.drawLine(x, 0, 63-x, 31, myRED);
   display.drawLine(63-x, 0, x, 31, myBLUE);
   display.drawLine(0, y, 63, 31-y, myGREEN);
   display.drawLine(0, 31-y, 63, y, myYELLOW);
 
-  display.printf("%02d:%02d:%02d", timeClient.getHours(), timeClient.getMinutes(), timeClient.getSeconds());
+  drawTimeWithBackground();
 
   x += stepX;
   y += stepY;
+  display.showBuffer();
 
-  // display.showBuffer();
-  delay(30);
+  // delay(30);
+}
 
+void timeSample2() {
+  static const int size = 10; 
+  static line_t lines[size];
+  static boolean initialized = false;
+  static byte radius = 35;
+
+  if (!initialized) {
+    for (int i = 0; i < size; i++) {
+      lines[i].x1 = sin(i * PI/size) * radius + 32;
+      lines[i].y1 = cos(i * PI/size) * radius + 16;
+      lines[i].x2 = sin(i * PI/size + PI) * radius + 32;
+      lines[i].y2 = cos(i * PI/size + PI) * radius + 16;
+
+      lines[i].color = myCOLORS[i % 7];
+      lines[i].arc = i * PI/size;
+    }
+    initialized = true;
+  }
+
+  display.clearDisplay();
+
+  for (int i = 0; i<size; i++) {
+    display.drawLine(lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
+
+    lines[i].arc -= PI * 2/180; // 2 degree more
+
+    if (lines[i].arc < 2 * PI) lines[i].arc += 2 * PI;
+
+    double arc = lines[i].arc;
+    lines[i].x1 = sin(arc) * radius + 32;
+    lines[i].y1 = cos(arc) * radius + 16;
+    lines[i].x2 = sin(arc + PI) * radius + 32;
+    lines[i].y2 = cos(arc + PI) * radius + 16;
+  }
+  drawTimeWithBackground();
+
+  display.showBuffer();
+}
+
+void timeSample3() {
+  static const int size = 20; 
+  static line_t lines[size];
+  static boolean initialized = false;
+  static byte radius = 37;
+  static const int step = 360/size; 
+  static int xVals[360];
+  static int yVals[360];
+
+  if (!initialized) {
+    for (int i = 0; i < 360; i++) {
+      xVals[i] = sin(i/180.0 * PI) * radius + 32;
+      yVals[i] = cos(i/180.0 * PI) * radius + 16;
+    }
+
+    for (int i = 0; i < size; i++) {
+      lines[i].x1 = xVals[i * step];
+      lines[i].y1 = yVals[i * step];
+      int step2 = (i + 1) * step;
+      if (step2 >= 360 ) step2 -=360; 
+      lines[i].x2 = xVals[(i + 1) * step];
+      lines[i].y2 = yVals[(i + 1) * step];
+
+      lines[i].color = myCOLORS[i % 7];
+      lines[i].degree = i * step;
+    }
+
+    initialized = true;
+  }
+
+  display.clearDisplay();
+
+  for (int i = 0; i<size; i++) {
+    lines[i].degree -= 2; // 2 degree more
+    if (lines[i].degree < 0) lines[i].degree += 360;
+
+    display.fillTriangle(32, 16, lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
+
+    int degree = lines[i].degree;
+    lines[i].x1 = xVals[degree];
+    lines[i].y1 = yVals[degree];
+    int step2 = degree + step;
+    if (step2 >= 360) step2 -= 360;
+    lines[i].x2 = xVals[step2];
+    lines[i].y2 = yVals[step2];
+  }
+  drawTimeWithBackground();
+
+  display.showBuffer();
 }
 
 void showScore() {
@@ -463,20 +601,31 @@ void myDelay(ulong millisecs) {
 }
 
 void loop() {
-  switch (mode)
-  {
-  case 1:
-    scoreBoard();
-    break;
-  case 2:
-    timeSample();
-    break;
-  
-  default:
+  if (!off) {
+    switch (mode)
+    {
+    case 1:
+      scoreBoard();
+      myDelay(30);
+      break;
+    case 2:
+      timeSample1();
+      myDelay(30);
+      break;
+    case 3:
+      timeSample2();
+      myDelay(30);
+      break;
+    case 4:
+      timeSample3();
+      myDelay(1);
+      break;
+    
+    default:
 
-    break;
+      break;
+    }
   }
 
-  myDelay(30);
 
 }
