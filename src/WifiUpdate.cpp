@@ -11,6 +11,8 @@ const char *xperia = "Xperia XZ_9983";
 const char *passwordXperia = "1q2w3e4r";
 const char *christian = "gigacube-5E0A";
 const char *passwordChristian = "GTRQT97GM5950NG5";
+const char *kertschuetz = "gigacube-067A";
+const char *passwordKertschuetz = "aLmQf46htDG6yDL5";
 const char *ledPushButtons = "LedPushButtons";
 const char *passwordLedPB = "1q2w3e4r";
 
@@ -33,6 +35,12 @@ void setupWifiUpdate()
     if (WiFi.SSID(i) == jena)
     {
       WiFi.begin(jena, passwordJena); //trying to connect the modem
+      found = true;
+      break;
+    }
+    if (WiFi.SSID(i) == kertschuetz)
+    {
+      WiFi.begin(kertschuetz, passwordKertschuetz); //trying to connect the modem
       found = true;
       break;
     }
