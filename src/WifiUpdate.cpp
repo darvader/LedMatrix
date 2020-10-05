@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <WifiUpdate.h>
@@ -13,9 +12,10 @@ const char *christian = "gigacube-5E0A";
 const char *passwordChristian = "GTRQT97GM5950NG5";
 const char *kertschuetz = "gigacube-067A";
 const char *passwordKertschuetz = "aLmQf46htDG6yDL5";
+const char *wenigenauma = "FRITZ!Box 7530 ER";
+const char *passwordWenigenauma = "28305153531359878885";
 const char *ledPushButtons = "LedPushButtons";
 const char *passwordLedPB = "1q2w3e4r";
-
 
 void setupWifiUpdate()
 {
@@ -50,6 +50,12 @@ void setupWifiUpdate()
       found = true;
       break;
     }
+    if (WiFi.SSID(i) == wenigenauma)
+    {
+      WiFi.begin(wenigenauma, passwordWenigenauma); //trying to connect the modem
+      found = true;
+      break;
+    }
     if (WiFi.SSID(i) == ledPushButtons)
     {
       WiFi.begin(ledPushButtons, passwordLedPB); //trying to connect the modem
@@ -66,7 +72,7 @@ void setupWifiUpdate()
   WiFi.mode(WIFI_STA);
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.println("Connection Failed! Rebooting...");
-    delay(5000);
+    delay(1000);
     ESP.restart();
   }
 
