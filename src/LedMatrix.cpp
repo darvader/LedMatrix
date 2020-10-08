@@ -9,11 +9,12 @@
 #include <WifiUpdate.h>
 #include <NTPClient.h>
 #include <complex>
-#include <Adafruit_NeoPixel.h>
 #include <FFTLed.h>
 #include <scoreboard.h>
 #include <Globals.h>
 #include <PxMatrix.h>
+#include <TimeSample.h>
+#include <Mandel.h>
 
 using namespace std;
 // Creates a second buffer for backround drawing (doubles the required RAM)
@@ -55,8 +56,7 @@ Ticker display_ticker;
 uint8_t display_draw_time=50; //30-70 is usually fine
 
 // PxMATRIX display(32,16,P_LAT, P_OE,P_A,P_B,P_C);
-PxMATRIX displayP = PxMATRIX(64,32,P_LAT, P_OE,P_A,P_B,P_C,P_D);
-PxMATRIX *display = &displayP;
+PxMATRIX *display = new PxMATRIX(64,32,P_LAT, P_OE,P_A,P_B,P_C,P_D);
 //PxMATRIX display(64,64,P_LAT, P_OE,P_A,P_B,P_C,P_D,P_E);
 
 // Some standard colors
@@ -144,11 +144,13 @@ WiFiUDP UdpNtp;
 const long utcOffsetInSeconds = 60*60*2;
 NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds);
 unsigned int localUdpPort = 4210;
-char incomingPacket[1024];
+char incomingPacket[64*32*3];
 char replyPacket[] = "LedMatrix";
 IPAddress masterIp;
 int mode = 1;
 Scoreboard *scoreboard;
+TimeSample timeSample(display, timeClient);
+Mandel mandel(display);
 
 
 void setupUdp();
@@ -189,37 +191,6 @@ void setupUdp() {
   // WebSerial.println("Udp configured.");
 }
 
-
-unsigned long last_draw=0;
-void scroll_text(uint8_t ypos, unsigned long scroll_delay, String text, uint8_t colorR, uint8_t colorG, uint8_t colorB)
-{
-    uint16_t text_length = text.length();
-    display->setTextWrap(false);  // we don't wrap text so it scrolls nicely
-    display->setTextSize(1);
-    display->setRotation(0);
-    display->setTextColor(display->color565(colorR,colorG,colorB));
-      // display->setTextColor(display->color565(colorR,colorG,colorB));
-
-    // Asuming 5 pixel average character width
-    for (int xpos=matrix_width; xpos>-(matrix_width+text_length*5); xpos--)
-    {
-      display->clearDisplay();
-      display->setCursor(xpos,ypos);
-      display->println(text);
-      delay(scroll_delay);
-      yield();
-
-      // This might smooth the transition a bit if we go slow
-      // display->setTextColor(display->color565(colorR/4,colorG/4,colorB/4));
-      // display->setCursor(xpos-1,ypos);
-      // display->println(text);
-
-      delay(scroll_delay/5);
-      yield();
-
-    }
-}
-
 void detect() {
   // send back a reply, to the IP address and port we got the packet from
   masterIp = Udp.remoteIP();
@@ -235,12 +206,25 @@ void displayOff() {
   display->showBuffer();
 }
 
+void displayPicture() {
+  int i = 0;
+  for (int x = 0; x < matrix_width; x++) {
+    yield();
+    for (int y = 0; y < matrix_height; y++)
+    {
+      display->drawPixelRGB888(x,y, incomingPacket[i++], incomingPacket[i++], incomingPacket[i++]);
+    }
+    
+  }
+  display->showBuffer();
+}
+
 void receiveUdp() {
   int packetSize = Udp.parsePacket();
 
   if (packetSize)
   {
-    int len = Udp.read(incomingPacket, 255);
+    int len = Udp.read(incomingPacket, 6144);
     if (len > 0)
     {
       incomingPacket[len] = 0;
@@ -256,6 +240,10 @@ void receiveUdp() {
     } else off = false;
     if (std::strcmp(incomingPacket,"remoteFFT") == 0) {
       mode = 10;
+      return;
+    } else
+    if (std::strcmp(incomingPacket,"picture") == 0) {
+      mode = 20;
       return;
     } else
     if (strstr(incomingPacket,"pointsLeft=") != NULL) {
@@ -320,6 +308,11 @@ void receiveUdp() {
       zoomMandelbrot = 1.0;
       return;
     }
+    if (mode == 20) {
+      displayPicture(); 
+
+      return;
+    }
     if (mode == 10) {
       for (int i = 0; i <= 128; i++) {
         vReal[i] = (double)incomingPacket[i];
@@ -333,218 +326,6 @@ void receiveUdp() {
     digitalWrite(LED_BUILTIN, LOW);
     digitalWrite(LED_BUILTIN, HIGH);
   }
-}
-
-struct line_t {
-  uint16_t color;
-  int16_t x1, x2, y1, y2;
-  double arc;
-  int degree;
-};
-
-void drawTimeWithBackground() {
-  display->fillRect(9, 10, 49, 9, myBLACK);
-  display->setTextSize(1);
-  display->setCursor(10,11);
-  display->setTextColor(myMAGENTA);
-  display->printf("%02d:%02d:%02d", timeClient->getHours(), timeClient->getMinutes(), timeClient->getSeconds());
-}
-
-void timeSample1() {
-  static int x = 0;
-  static int y = 0;
-  static int stepX = 1;
-  static int stepY = 1;
-
-  if (x == 63) stepX = -1;
-  if (x == 0) stepX = 1;
-  if (y == 31) stepY = -1;
-  if (y == 0) stepY = 1;
-
-  display->clearDisplay();
-  
-
-  display->drawLine(x, 0, 63-x, 31, myRED);
-  display->drawLine(63-x, 0, x, 31, myBLUE);
-  display->drawLine(0, y, 63, 31-y, myGREEN);
-  display->drawLine(0, 31-y, 63, y, myYELLOW);
-
-  drawTimeWithBackground();
-
-  x += stepX;
-  y += stepY;
-  display->showBuffer();
-
-  // delay(30);
-}
-
-void timeSample2() {
-  static const int size = 10; 
-  static line_t lines[size];
-  static boolean initialized = false;
-  static byte radius = 35;
-
-  if (!initialized) {
-    for (int i = 0; i < size; i++) {
-      lines[i].x1 = sin(i * PI/size) * radius + 32;
-      lines[i].y1 = cos(i * PI/size) * radius + 16;
-      lines[i].x2 = sin(i * PI/size + PI) * radius + 32;
-      lines[i].y2 = cos(i * PI/size + PI) * radius + 16;
-
-      lines[i].color = myCOLORS[i % 7];
-      lines[i].arc = i * PI/size;
-    }
-    initialized = true;
-  }
-
-  display->clearDisplay();
-
-  for (int i = 0; i<size; i++) {
-    display->drawLine(lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
-
-    lines[i].arc -= PI * 2/180; // 2 degree more
-
-    if (lines[i].arc < 2 * PI) lines[i].arc += 2 * PI;
-
-    double arc = lines[i].arc;
-    lines[i].x1 = sin(arc) * radius + 32;
-    lines[i].y1 = cos(arc) * radius + 16;
-    lines[i].x2 = sin(arc + PI) * radius + 32;
-    lines[i].y2 = cos(arc + PI) * radius + 16;
-  }
-  drawTimeWithBackground();
-
-  display->showBuffer();
-}
-
-void timeSample3() {
-  static const int size = 20; 
-  static line_t lines[size];
-  static boolean initialized = false;
-  static byte radius = 37;
-  static const int step = 360/size; 
-  static int xVals[360];
-  static int yVals[360];
-
-  if (!initialized) {
-    for (int i = 0; i < 360; i++) {
-      xVals[i] = sin(i/180.0 * PI) * radius + 32;
-      yVals[i] = cos(i/180.0 * PI) * radius + 16;
-    }
-
-    for (int i = 0; i < size; i++) {
-      lines[i].x1 = xVals[i * step];
-      lines[i].y1 = yVals[i * step];
-      int step2 = (i + 1) * step;
-      if (step2 >= 360 ) step2 -=360; 
-      lines[i].x2 = xVals[(i + 1) * step];
-      lines[i].y2 = yVals[(i + 1) * step];
-
-      lines[i].color = myCOLORS[i % 7];
-      lines[i].degree = i * step;
-    }
-
-    initialized = true;
-  }
-
-  display->clearDisplay();
-
-  for (int i = 0; i<size; i++) {
-    lines[i].degree -= 2; // 2 degree more
-    if (lines[i].degree < 0) lines[i].degree += 360;
-
-    display->fillTriangle(32, 16, lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
-
-    int degree = lines[i].degree;
-    lines[i].x1 = xVals[degree];
-    lines[i].y1 = yVals[degree];
-    int step2 = degree + step;
-    if (step2 >= 360) step2 -= 360;
-    lines[i].x2 = xVals[step2];
-    lines[i].y2 = yVals[step2];
-  }
-  drawTimeWithBackground();
-
-  display->showBuffer();
-}
-
-void timeSample4() {
-  static const int size = 30; 
-  static line_t lines[size];
-  static boolean initialized = false;
-  static byte radius = 37;
-  static const int step = 360/size; 
-  static int xVals[360];
-  static int yVals[360];
-
-  if (!initialized) {
-    for (int i = 0; i < 360; i++) {
-      xVals[i] = sin(i/180.0 * PI) * radius + 32;
-      yVals[i] = cos(i/180.0 * PI) * radius + 16;
-    }
-
-    for (int i = 0; i < size; i++) {
-      lines[i].x1 = xVals[i * step];
-      lines[i].y1 = yVals[i * step];
-      int step2 = (i + 1) * step;
-      if (step2 >= 360 ) step2 -=360; 
-      lines[i].x2 = xVals[(i + 1) * step];
-      lines[i].y2 = yVals[(i + 1) * step];
-      uint32_t c32 = Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::ColorHSV(65536L/size * i));
-      lines[i].color = display->color565((c32 & 0xff0000) >> 16, (c32 & 0xff00) >> 8, c32 & 0xff);
-      lines[i].degree = i * step;
-    }
-
-    initialized = true;
-  }
-
-  display->clearDisplay();
-
-  for (int i = 0; i<size; i++) {
-    lines[i].degree -= 2; // 2 degree more
-    if (lines[i].degree < 0) lines[i].degree += 360;
-
-    display->fillTriangle(32, 16, lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
-
-    int degree = lines[i].degree;
-    lines[i].x1 = xVals[degree];
-    lines[i].y1 = yVals[degree];
-    int step2 = degree + step;
-    if (step2 >= 360) step2 -= 360;
-    lines[i].x2 = xVals[step2];
-    lines[i].y2 = yVals[step2];
-  }
-  drawTimeWithBackground();
-
-  display->showBuffer();
-}
-
-int value (int x, int y, float zoom)  {
-    complex<float> point((float)x/30-1.5, (float)y/30-0.5);
-    point *= zoom;
-    complex<float> z(0, 0);
-    int nb_iter = 0;
-    while (abs (z) < 2 && nb_iter <= 20) {
-        z = z * z + point;
-        nb_iter++;
-    }
-    if (nb_iter < 20)
-       return (255*nb_iter)/20;
-    else 
-       return 0;
-}
-
-void mandelbrot() {
-  display->clearDisplay();
-  zoomMandelbrot *= 0.99;
-  for (int x = 0; x<matrix_width; x++) {
-    for (int y = 0; y <matrix_height; y++) {
-      yield();
-      int c = value(x, y, zoomMandelbrot);
-      display->drawPixelRGB888(x, y, c, 0, 0);
-    }
-  }
-  display->showBuffer();
 }
 
 // do something usefull instead of just waiting
@@ -566,23 +347,23 @@ void loop() {
       myDelay(30);
       break;
     case 2:
-      timeSample1();
+      timeSample.timeSample1();
       myDelay(30);
       break;
     case 3:
-      timeSample2();
+      timeSample.timeSample2();
       myDelay(30);
       break;
     case 4:
-      timeSample3();
+      timeSample.timeSample3();
       myDelay(1);
       break;
     case 5:
-      timeSample4();
+      timeSample.timeSample4();
       myDelay(1);
       break;
     case 6:
-      mandelbrot();
+      mandel.mandelbrot();
       myDelay(1);
       break;
     

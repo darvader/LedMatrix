@@ -4,6 +4,7 @@
 extern double vReal[];
 extern char incomingPacket[];
 extern char scrollingText[];
+extern uint16_t myCOLORS[];
 
 extern uint16_t myRED;
 extern uint16_t myGREEN;
