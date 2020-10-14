@@ -14,6 +14,8 @@ const char *kertschuetz = "gigacube-067A";
 const char *passwordKertschuetz = "aLmQf46htDG6yDL5";
 const char *wenigenauma = "FRITZ!Box 7530 ER";
 const char *passwordWenigenauma = "28305153531359878885";
+const char *post = "ZurPost";
+const char *passwordPost = "Kutsche30";
 const char *ledPushButtons = "LedPushButtons";
 const char *passwordLedPB = "1q2w3e4r";
 
@@ -53,6 +55,12 @@ void setupWifiUpdate()
     if (WiFi.SSID(i) == wenigenauma)
     {
       WiFi.begin(wenigenauma, passwordWenigenauma); //trying to connect the modem
+      found = true;
+      break;
+    }
+    if (WiFi.SSID(i) == post)
+    {
+      WiFi.begin(post, passwordPost); //trying to connect the modem
       found = true;
       break;
     }

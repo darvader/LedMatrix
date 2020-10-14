@@ -15,6 +15,7 @@
 #include <PxMatrix.h>
 #include <TimeSample.h>
 #include <Mandel.h>
+#include <Timer.h>
 
 using namespace std;
 // Creates a second buffer for backround drawing (doubles the required RAM)
@@ -147,10 +148,11 @@ unsigned int localUdpPort = 4210;
 char incomingPacket[64*32*3];
 char replyPacket[] = "LedMatrix";
 IPAddress masterIp;
-int mode = 1;
+int mode = 5;
 Scoreboard *scoreboard;
 TimeSample timeSample(display, timeClient);
 Mandel mandel(display);
+Timer timer(display);
 
 
 void setupUdp();
@@ -181,7 +183,6 @@ void setup() {
   setupUdp();
   timeClient->begin();
   scoreboard = new Scoreboard(timeClient, display);
-  Serial.printf("Display pointer: %d \n", display);
 }
 
 
@@ -278,6 +279,22 @@ void receiveUdp() {
       display_draw_time = incomingPacket[11];
       return;
     }
+    if (strstr(incomingPacket,"timer=") != NULL) {
+      mode = 30;
+      uint16_t timeToSet = incomingPacket[6] << 8 | incomingPacket[7];
+      Serial.printf("Timer: %d", timeToSet);
+      timer.setTimer(timeToSet);
+
+      return;
+    }
+    if (std::strcmp(incomingPacket,"timerStart") == 0) {
+      timer.start();
+      return;
+    }
+    if (std::strcmp(incomingPacket,"timerPause") == 0) {
+      timer.pause();
+      return;
+    }
     if (std::strcmp(incomingPacket,"timeout") == 0) {
       scoreboard->timeoutStart = millis();
       scoreboard->timeoutOn = true;
@@ -366,7 +383,10 @@ void loop() {
       mandel.mandelbrot();
       myDelay(1);
       break;
-    
+    case 30:
+      timer.show();
+      myDelay(1);
+      break;
     default:
       myDelay(1);
 

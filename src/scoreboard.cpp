@@ -84,7 +84,5 @@ void Scoreboard::show() {
   else
     showScrollingText();
   showTime();
-  Serial.println("Time showed");  
   display->showBuffer();
-  Serial.println("Buffer flipped");  
 }

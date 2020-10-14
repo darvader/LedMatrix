@@ -149,6 +149,7 @@ void TimeSample::timeSample3() {
 }
 
 void TimeSample::timeSample4() {
+  timeClient->update();
   static const int size = 30; 
   static line_t lines[size];
   static boolean initialized = false;
