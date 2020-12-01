@@ -3,6 +3,7 @@
 class Timer
 {
 private:
+    int mode = 0;
     float elapsed = 0.0f;
     boolean started = false;
     long startTime = millis();
@@ -18,6 +19,11 @@ public:
     void start();
     void pause();
     void setTimer(uint16_t timer);
+    void stopWatch();
+    void stopWatchStart();
+    void stopWatchStop();
     void show();
+    void showTimer();
+    void showStopWatch();
 };
 

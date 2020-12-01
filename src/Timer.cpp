@@ -17,22 +17,25 @@ Timer::~Timer()
 }
 
 void Timer::setTimer(uint16_t timer) {
+    mode = 0;
     this->timer = timer;
     this->elapsed = timer;
     this->started = false;
 }
 
 void Timer::start() {
+    mode = 0;
     this->startTime = millis();
     this->started = true;
 }
 
 void Timer::pause() {
+    mode = 0;
     started = !started;
     this->startTime = millis() - (timer - elapsed)*1000;
 }
 
-void Timer::show() {
+void Timer::showTimer() {
     static long blinkingStart = 0;
 
     display->clearDisplay();
@@ -44,7 +47,7 @@ void Timer::show() {
     if (started) {
         elapsed = (startTime + timer*1000.0f - millis())/1000.0f;
 
-        if (timer - elapsed < 1.0) {
+        if (timer - elapsed < 0.3) {
             if (millis() % 200 > 100) {
                 display->fillScreen(myGREEN);
                 display->setTextColor(myBLACK);
@@ -64,4 +67,54 @@ void Timer::show() {
     }
     display->printf("%05.1f", elapsed);
     display->showBuffer();
+}
+
+void Timer::showStopWatch() {
+    display->clearDisplay();
+    display->setTextSize(2);
+    uint32_t c32 = Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::ColorHSV(65536 * elapsed / 30));
+    uint16_t color = display->color565((c32 & 0xff0000) >> 16, (c32 & 0xff00) >> 8, c32 & 0xff);
+
+    display->setTextColor(color);
+    display->setCursor(3,8);
+
+    if (started) {
+        elapsed = (millis() - startTime)/1000.0f;
+    }
+
+    display->printf("%05.1f", elapsed);
+    display->showBuffer();
+}
+
+void Timer::show() {
+    switch (mode)
+    {
+    case 0:
+        showTimer();
+        break;
+    case 1:
+        showStopWatch();
+        break;
+    
+    default:
+        break;
+    }
+}
+
+void Timer::stopWatch() {
+    mode = 1;
+    elapsed = 0.0f;
+    started = false;
+}
+
+void Timer::stopWatchStart() {
+    mode = 1;
+    started = true;
+    startTime = millis();
+}
+
+void Timer::stopWatchStop() {
+    mode = 1;
+    started = !started;
+    elapsed = (millis() - startTime) / 1000.0f;
 }

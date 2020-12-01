@@ -54,7 +54,7 @@ Ticker display_ticker;
 
 // This defines the 'on' time of the display is us. The larger this number,
 // the brighter the display-> If too large the ESP will crash
-uint8_t display_draw_time=50; //30-70 is usually fine
+uint8_t display_draw_time=10; //30-70 is usually fine
 
 // PxMATRIX display(32,16,P_LAT, P_OE,P_A,P_B,P_C);
 PxMATRIX *display = new PxMATRIX(64,32,P_LAT, P_OE,P_A,P_B,P_C,P_D);
@@ -142,7 +142,7 @@ char scrollingText[512] = "VSV Jena 90 e.V. : Gastmannschaft";
 WiFiUDP Udp;
 WiFiUDP UdpNtp;
 
-const long utcOffsetInSeconds = 60*60*2;
+const long utcOffsetInSeconds = 60*60*1;
 NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds);
 unsigned int localUdpPort = 4210;
 char incomingPacket[64*32*3];
@@ -157,6 +157,7 @@ Timer timer(display);
 
 void setupUdp();
 void receiveUdp();
+void myDelay(ulong millisecs);
 
 void setup() {
   Serial.begin(115200);
@@ -199,6 +200,18 @@ void detect() {
   Udp.write(replyPacket);
   Udp.endPacket();
   Serial.println("Detect received.");
+  display->clearDisplay();
+  display->showBuffer();
+  display->clearDisplay();
+  for(int i = 0; i < matrix_width; i++) {
+    display->drawFastVLine(i,0,31,myRED);
+    display->setCursor(10,10);
+    display->setTextColor(myGREEN);
+    display->setTextSize(1);
+    display->print("Detect");
+    myDelay(20);
+    display->showBuffer();
+  }
 }
 
 void displayOff() {
@@ -289,6 +302,19 @@ void receiveUdp() {
     }
     if (std::strcmp(incomingPacket,"timerStart") == 0) {
       timer.start();
+      return;
+    }
+    if (std::strcmp(incomingPacket,"stopWatch") == 0) {
+      mode = 30;
+      timer.stopWatch();
+      return;
+    }
+    if (std::strcmp(incomingPacket,"stopWatchStart") == 0) {
+      timer.stopWatchStart();
+      return;
+    }
+    if (std::strcmp(incomingPacket,"stopWatchStop") == 0) {
+      timer.stopWatchStop();
       return;
     }
     if (std::strcmp(incomingPacket,"timerPause") == 0) {
