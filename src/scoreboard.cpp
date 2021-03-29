@@ -4,6 +4,7 @@
 #include <Globals.h>
 #include <scoreboard.h>
 #include <Fonts/Picopixel.h>
+#include <Time.h>
 
 void Scoreboard::showScrollingText() {
   static int textX = 0;
@@ -38,12 +39,14 @@ void Scoreboard::showScore() {
 
 void Scoreboard::showTime() {
   timeClient->update();
+  time_t utc = timeClient->getEpochTime();
+  time_t local = myTZ.toLocal(utc, &tcr);
 
   display->setTextSize(1);
   display->setFont(&Picopixel);
   display->setTextColor(myMAGENTA);
   display->setCursor(18, 20);
-  display->printf("%02d:%02d:%02d", timeClient->getHours(), timeClient->getMinutes(), timeClient->getSeconds());
+  display->printf("%02d:%02d:%02d", hour(local), minute(local), second(local));
   display->setFont();
 }
 

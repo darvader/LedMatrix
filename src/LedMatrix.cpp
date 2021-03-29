@@ -80,6 +80,17 @@ float zoomMandelbrot = 1.0;
 
 boolean off = false;
 
+// US Eastern Time Zone (New York, Detroit)
+TimeChangeRule myDST = {"EDT", Second, Sun, Mar, 2, 120};    // Daylight time = UTC - 4 hours
+TimeChangeRule mySTD = {"EST", First, Sun, Nov, 2, 60};     // Standard time = UTC - 5 hours
+Timezone myTZ(myDST, mySTD);
+
+// If TimeChangeRules are already stored in EEPROM, comment out the three
+// lines above and uncomment the line below.
+//Timezone myTZ(100);       // assumes rules stored at EEPROM address 100
+
+TimeChangeRule *tcr;        // pointer to the time change rule, use to get TZ abbrev
+
 #ifdef ESP8266
 // ISR for display refresh
 void display_updater()
@@ -143,7 +154,7 @@ char scrollingText[512] = "VSV Jena 90 e.V. : Gastmannschaft";
 WiFiUDP Udp;
 WiFiUDP UdpNtp;
 
-const long utcOffsetInSeconds = 60*60*2;
+const long utcOffsetInSeconds = 60*60*0;
 NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds);
 unsigned int localUdpPort = 4210;
 char incomingPacket[64*32*3];
@@ -231,8 +242,7 @@ void setup() {
   setupWifiUpdate();
   setupUdp();
   timeClient->begin();
-  scoreboard = new Scoreboard(timeClient, display);
-}
+  scoreboard = new Scoreboard(timeClient, display);}
 
 
 void setupUdp() {

@@ -4,11 +4,13 @@
 #include <TimeSample.h>
 #include <Globals.h>
 #include <Adafruit_NeoPixel.h>
+#include <Time.h>
 
 TimeSample::TimeSample(PxMATRIX *display, NTPClient *timeClient)
 {
     this->display = display;
     this->timeClient = timeClient;
+  setupTime();
 }
 
 TimeSample::~TimeSample()
@@ -35,10 +37,15 @@ void TimeSample::drawTimeWithBackground() {
 }
 
 void inline TimeSample::drawTime() {
+  timeClient->update();
+  time_t utc = timeClient->getEpochTime();
+  time_t local = myTZ.toLocal(utc, &tcr);
+
+
   display->setTextSize(1);
   display->setCursor(10,11);
   display->setTextColor(myMAGENTA);
-  display->printf("%02d:%02d:%02d", timeClient->getHours(), timeClient->getMinutes(), timeClient->getSeconds());
+  display->printf("%02d:%02d:%02d", hour(local), minute(local), second(local));
 }
 
 void TimeSample::timeSample1() {
