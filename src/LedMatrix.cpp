@@ -16,6 +16,7 @@
 #include <TimeSample.h>
 #include <Mandel.h>
 #include <Timer.h>
+#include <fauxmoESP.h>
 
 using namespace std;
 // Creates a second buffer for backround drawing (doubles the required RAM)
@@ -142,22 +143,68 @@ char scrollingText[512] = "VSV Jena 90 e.V. : Gastmannschaft";
 WiFiUDP Udp;
 WiFiUDP UdpNtp;
 
-const long utcOffsetInSeconds = 60*60*1;
+const long utcOffsetInSeconds = 60*60*2;
 NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds);
 unsigned int localUdpPort = 4210;
 char incomingPacket[64*32*3];
 char replyPacket[] = "LedMatrix";
 IPAddress masterIp;
-int mode = 5;
+int mode = 6;
 Scoreboard *scoreboard;
 TimeSample timeSample(display, timeClient);
 Mandel mandel(display);
 Timer timer(display);
-
+fauxmoESP fauxmo;
 
 void setupUdp();
 void receiveUdp();
+void displayOff();
 void myDelay(ulong millisecs);
+
+void setupFauxmo() {
+  fauxmo.addDevice("Uhr 1");
+  fauxmo.addDevice("Uhr 2");
+  fauxmo.addDevice("Uhr 3");
+  fauxmo.addDevice("Uhr 4");
+  fauxmo.addDevice("Schnee");
+  fauxmo.addDevice("Uhr");
+
+  fauxmo.setPort(80); // required for gen3 devices
+  fauxmo.enable(true);
+
+  fauxmo.onSetState([](unsigned char device_id, const char * device_name, bool state, unsigned char value) {
+      Serial.printf("[MAIN] Device #%d (%s) state: %s value: %d\n", device_id, device_name, state ? "ON" : "OFF", value);
+      if (std::strcmp(device_name,"Uhr") == 0) {
+        if (!state) {
+          displayOff();
+        }
+        display_draw_time = value/255.0 * 60 ;
+        return;
+      } else off = false;
+      if (std::strcmp(device_name,"Uhr 1") == 0) {
+        mode = 2;
+
+        return;
+      }
+      if (std::strcmp(device_name,"Uhr 2") == 0) {
+        mode = 3;
+        return;
+      }
+      if (std::strcmp(device_name,"Uhr 3") == 0) {
+        mode = 4;
+        return;
+      }
+      if (std::strcmp(device_name,"Uhr 4") == 0) {
+        mode = 5;
+        return;
+      }
+      if (std::strcmp(device_name,"Schnee") == 0) {
+        mode = 6;
+        return;
+      }
+
+  });
+}
 
 void setup() {
   Serial.begin(115200);
@@ -180,6 +227,7 @@ void setup() {
   display->setDriverChip(FM6124);
   display->showBuffer();
 
+  setupFauxmo();
   setupWifiUpdate();
   setupUdp();
   timeClient->begin();
@@ -216,6 +264,8 @@ void detect() {
 
 void displayOff() {
   off = true;
+  display->clearDisplay();
+  display->showBuffer();
   display->clearDisplay();
   display->showBuffer();
 }
@@ -342,12 +392,16 @@ void receiveUdp() {
       mode = 5;
       return;
     }
+    if (std::strcmp(incomingPacket,"timeSnow") == 0) {
+      mode = 6;
+      return;
+    }
     if (std::strcmp(incomingPacket,"scoreboard") == 0) {
       mode = 1;
       return;
     }
     if (std::strcmp(incomingPacket,"mandelbrot") == 0) {
-      mode = 6;
+      mode = 60;
       zoomMandelbrot = 1.0;
       return;
     }
@@ -375,6 +429,7 @@ void receiveUdp() {
 void myDelay(ulong millisecs) {
   long time = millis();
   while (millis() - time < millisecs) {
+    fauxmo.handle();
     ArduinoOTA.handle();
     receiveUdp();
     yield();
@@ -406,6 +461,10 @@ void loop() {
       myDelay(1);
       break;
     case 6:
+      timeSample.timeSnow();
+      myDelay(30);
+      break;
+    case 60:
       mandel.mandelbrot();
       myDelay(1);
       break;

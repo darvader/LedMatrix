@@ -22,8 +22,19 @@ struct line_t {
   int degree;
 };
 
+enum Snow { small, medium, large };
+struct snow_t {
+  Snow type;
+  float x, y;
+  float speed;
+};
+
 void TimeSample::drawTimeWithBackground() {
   display->fillRect(9, 10, 49, 9, myBLACK);
+  drawTime();
+}
+
+void inline TimeSample::drawTime() {
   display->setTextSize(1);
   display->setCursor(10,11);
   display->setTextColor(myMAGENTA);
@@ -197,5 +208,50 @@ void TimeSample::timeSample4() {
   }
   drawTimeWithBackground();
 
+  display->showBuffer();
+}
+
+uint16_t static mediumSnow[] = {0x0000, 0xffff, 0x0000,
+                                0xffff, 0xffff, 0xffff,
+                                0x0000, 0xffff, 0x0000};
+
+
+
+void TimeSample::timeSnow() {
+  static boolean initialized = false;
+  static const int numSmallSnows = 60; 
+  static const int numMediumSnows = 10; 
+  static const int numLargeSnows = 10; 
+
+  static snow_t smallSnows[numSmallSnows];
+  static snow_t mediumSnows[numMediumSnows];
+  static snow_t largeSnows[numLargeSnows];
+  static snow_t snow;
+
+  if (!initialized) {
+    for (int i = 0; i < numSmallSnows; i++) {
+      smallSnows[i].type = small;
+      smallSnows[i].x = random(63);
+      smallSnows[i].y = random(31);
+      smallSnows[i].speed = random(3, 10)/10.0f;
+    }    
+
+    initialized = true;
+  }
+
+  timeClient->update();
+  display->clearDisplay();
+
+  for (int i = 0; i < numSmallSnows; i++) {
+    display->drawPixelRGB888(smallSnows[i].x, smallSnows[i].y, 0xff*smallSnows[i].speed, 0xff*smallSnows[i].speed, 0xff*smallSnows[i].speed);
+    smallSnows[i].y += smallSnows[i].speed;
+    if (smallSnows[i].y > 31) {
+      smallSnows[i].x = random(63); 
+      smallSnows[i].y = 0;
+      smallSnows[i].speed = random(3,10)/10.0f;
+    }
+  }  
+
+  drawTime();
   display->showBuffer();
 }
