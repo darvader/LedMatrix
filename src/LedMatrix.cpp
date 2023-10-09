@@ -270,6 +270,9 @@ void detect() {
     myDelay(20);
     display->showBuffer();
   }
+  display->clearDisplay();
+  display->showBuffer();
+  display->clearDisplay();
 }
 
 void displayOff() {

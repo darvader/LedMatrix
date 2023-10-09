@@ -12,6 +12,7 @@ public:
     PxMATRIX *display;
     Mandel(PxMATRIX *display);
     ~Mandel();
-    int value (int x, int y, float zoom);
+    int value(double real, double imag);
+    void draw_deep(double x_start, double x_fin, double y_start, double y_fin);
     void mandelbrot();
 };

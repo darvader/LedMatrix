@@ -4,7 +4,7 @@ class Timer
 {
 private:
     int mode = 0;
-    float elapsed = 0.0f;
+    double elapsed = 0.0f;
     boolean started = false;
     long startTime = millis();
     PxMATRIX *display;
