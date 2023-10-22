@@ -6,9 +6,8 @@
 
 const char *jena = "TP-LINK_695BD8";
 const char *passwordJena = "1728391346789";
-const char *xperia = "Xperia XZ_9983";
-const char *passwordXperia = "1q2w3e4r";
-const char *christian = "gigacube-5E0A";
+const char *hotspot = "andi_hotspot";
+const char *passwordHotspot = "1q2w3e4r";const char *christian = "gigacube-5E0A";
 const char *passwordChristian = "GTRQT97GM5950NG5";
 const char *kertschuetz = "gigacube-067A";
 const char *passwordKertschuetz = "aLmQf46htDG6yDL5";
@@ -28,9 +27,9 @@ void setupWifiUpdate()
   for (int i = 0; i < n; ++i)
   {
     Serial.println(WiFi.SSID(i));
-    if (WiFi.SSID(i) == xperia)
+    if (WiFi.SSID(i) == hotspot)
     {
-      WiFi.begin(xperia, passwordXperia); //trying to connect the modem
+      WiFi.begin(hotspot, passwordHotspot); //trying to connect the modem
       found = true;
       break;
     }
