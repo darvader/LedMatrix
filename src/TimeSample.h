@@ -18,6 +18,7 @@ public:
     void timeSample2();
     void timeSample3();
     void timeSample4();
+    void timePlasma();
     void timeSnow();
 };
 

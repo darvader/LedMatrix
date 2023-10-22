@@ -160,7 +160,7 @@ unsigned int localUdpPort = 4210;
 char incomingPacket[64*32*3];
 char replyPacket[] = "LedMatrix";
 IPAddress masterIp;
-int mode = 6;
+int mode = 7;
 Scoreboard *scoreboard;
 TimeSample timeSample(display, timeClient);
 Mandel mandel(display);
@@ -178,6 +178,7 @@ void setupFauxmo() {
   fauxmo.addDevice("Uhr 3");
   fauxmo.addDevice("Uhr 4");
   fauxmo.addDevice("Schnee");
+  fauxmo.addDevice("Plasma");
   fauxmo.addDevice("Uhr");
 
   fauxmo.setPort(80); // required for gen3 devices
@@ -409,6 +410,10 @@ void receiveUdp() {
       mode = 6;
       return;
     }
+    if (std::strcmp(incomingPacket,"timePlasma") == 0) {
+      mode = 7;
+      return;
+    }
     if (std::strcmp(incomingPacket,"scoreboard") == 0) {
       mode = 1;
       return;
@@ -475,6 +480,10 @@ void loop() {
       break;
     case 6:
       timeSample.timeSnow();
+      myDelay(30);
+      break;
+    case 7:
+      timeSample.timePlasma();
       myDelay(30);
       break;
     case 60:
