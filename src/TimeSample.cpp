@@ -216,7 +216,7 @@ void TimeSample::timeSample4() {
 
     for (int x = 0; x < PANE_WIDTH; x++)
     {
-      if (x % 8 == 0) yield(); // let update the display, otherwise it flickers
+      if (x % 4 == 0) yield(); // let update the display, otherwise it flickers
       for (int y = 0; y < PANE_HEIGHT; y++)
       {
         int16_t v = 0;
