@@ -4,14 +4,20 @@
 #include <TimeSample.h>
 #include <Globals.h>
 #include <Adafruit_NeoPixel.h>
-#include <Time.h>
+#include <TimeLedMatrix.h>
 #include <FastLED.h>
 
+#ifdef ESP8266
 TimeSample::TimeSample(PxMATRIX *display, NTPClient *timeClient)
 {
+#endif
+#ifdef ESP32
+TimeSample::TimeSample(VirtualMatrixPanel *display, NTPClient *timeClient)
+{
+#endif
     this->display = display;
     this->timeClient = timeClient;
-  setupTime();
+    setupTime();
 }
 
 TimeSample::~TimeSample()
@@ -60,7 +66,7 @@ void TimeSample::timeSample1() {
   if (y == 31) stepY = -1;
   if (y == 0) stepY = 1;
 
-  display->clearDisplay();
+  clear();
   
 
   display->drawLine(x, 0, 63-x, 31, myRED);
@@ -72,7 +78,7 @@ void TimeSample::timeSample1() {
 
   x += stepX;
   y += stepY;
-  display->showBuffer();
+  showBuffer();
 
   // delay(30);
 }
@@ -96,7 +102,7 @@ void TimeSample::timeSample2() {
     initialized = true;
   }
 
-  display->clearDisplay();
+  clear();
 
   for (int i = 0; i<size; i++) {
     display->drawLine(lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
@@ -113,7 +119,7 @@ void TimeSample::timeSample2() {
   }
   drawTimeWithBackground();
 
-  display->showBuffer();
+  showBuffer();
 }
 
 void TimeSample::timeSample3() {
@@ -146,7 +152,7 @@ void TimeSample::timeSample3() {
     initialized = true;
   }
 
-  display->clearDisplay();
+  clear();
 
   for (int i = 0; i<size; i++) {
     lines[i].degree -= 2; // 2 degree more
@@ -164,7 +170,7 @@ void TimeSample::timeSample3() {
   }
   drawTimeWithBackground();
 
-  display->showBuffer();
+  showBuffer();
 }
 
 void TimeSample::timeSample4() {
@@ -211,7 +217,7 @@ void TimeSample::timeSample4() {
 
     timeClient->update();
 
-    display->clearDisplay();
+    clear();
 
 
     for (int x = 0; x < PANE_WIDTH; x++)
@@ -251,7 +257,7 @@ void TimeSample::timeSample4() {
     }
     drawTimeWithBackground();
 
-    display->showBuffer();
+    showBuffer();
   }
 
 uint16_t static mediumSnow[] = {0x0000, 0xffff, 0x0000,
@@ -283,7 +289,7 @@ void TimeSample::timeSnow() {
   }
 
   timeClient->update();
-  display->clearDisplay();
+  clear();
 
   for (int i = 0; i < numSmallSnows; i++) {
     display->drawPixelRGB888(smallSnows[i].x, smallSnows[i].y, 0xff*smallSnows[i].speed, 0xff*smallSnows[i].speed, 0xff*smallSnows[i].speed);
@@ -296,5 +302,5 @@ void TimeSample::timeSnow() {
   }  
 
   drawTime();
-  display->showBuffer();
+  showBuffer();
 }

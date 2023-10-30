@@ -20,12 +20,12 @@ float scale = 1.0f;
 
 arduinoFFT FFT = arduinoFFT();
 
-void ledFFT(PxMATRIX *display) {
+void ledFFT(VirtualMatrixPanel *display) {
   int j = 0;
   Serial.printf("Start LED");
   int fadeDown = 10;
   int threshold = 10;
-  display->clearDisplay();
+  display->clearScreen();
   for (int i = 2; i < 128; i++){ // Don't use sample 0 and only first SAMPLES/2 are usable. Each array eleement represents a frequency and its value the amplitude.
     int real = (int) vReal[i];
     if (real<threshold) {
@@ -40,7 +40,7 @@ void ledFFT(PxMATRIX *display) {
     } 
     yield();
   }
-  display->showBuffer();
+  // display->showBuffer();
 }
 
 // int led;

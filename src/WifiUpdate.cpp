@@ -1,8 +1,15 @@
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
+#ifdef ESP8266
+  #include <ESP8266WiFi.h>
+#endif
+#ifdef ESP32
+  #include <WiFi.h>
+#endif
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <WifiUpdate.h>
+
+
 
 const char *jena = "TP-LINK_695BD8";
 const char *passwordJena = "1728391346789";

@@ -1,15 +1,19 @@
-#include <PxMatrix.h>
 #include <NTPClient.h>
+#include <BaseLedMatrix.h>
 
-class TimeSample
+class TimeSample: public BaseLedMatrix
 {
 private:
     /* data */
 public:
-    PxMATRIX *display;
     NTPClient *timeClient;
 
+#ifdef ESP8266
     TimeSample(PxMATRIX *display, NTPClient *timeClient);
+#endif
+#ifdef ESP32
+    TimeSample(VirtualMatrixPanel *display, NTPClient *timeClient);
+#endif
     ~TimeSample();
 
     void drawTimeWithBackground();

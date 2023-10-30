@@ -4,8 +4,12 @@
 #include <Globals.h>
 #include <Adafruit_NeoPixel.h>
 
-
+#ifdef ESP8266
 Timer::Timer(PxMATRIX *display)
+#endif
+#ifdef ESP32
+Timer::Timer(VirtualMatrixPanel *display)
+#endif
 {
     this->display = display;
     this->timer = 30;
@@ -38,7 +42,7 @@ void Timer::pause() {
 void Timer::showTimer() {
     static long blinkingStart = 0;
 
-    display->clearDisplay();
+    clear();
     display->setTextSize(2);
     uint32_t c32 = Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::ColorHSV(65536 - 65536L*3/4*elapsed/timer));
     uint16_t color = display->color565((c32 & 0xff0000) >> 16, (c32 & 0xff00) >> 8, c32 & 0xff);
@@ -66,11 +70,11 @@ void Timer::showTimer() {
         }
     }
     display->printf("%05.1f", elapsed);
-    display->showBuffer();
+    showBuffer();
 }
 
 void Timer::showStopWatch() {
-    display->clearDisplay();
+    clear();
     display->setTextSize(2);
     uint32_t c32 = Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::ColorHSV(65536 * elapsed / 30));
     uint16_t color = display->color565((c32 & 0xff0000) >> 16, (c32 & 0xff00) >> 8, c32 & 0xff);
@@ -83,7 +87,7 @@ void Timer::showStopWatch() {
     }
 
     display->printf("%05.1f", elapsed);
-    display->showBuffer();
+    showBuffer();
 }
 
 void Timer::show() {

@@ -1,7 +1,7 @@
-#include <PxMatrix.h>
+#include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 
 void fft();
 void fftRow();
-void ledFFT(PxMATRIX *display);
+void ledFFT(VirtualMatrixPanel *display);
 void ledFFTRow();
 void calcFFT();

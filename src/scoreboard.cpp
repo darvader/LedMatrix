@@ -4,7 +4,7 @@
 #include <Globals.h>
 #include <scoreboard.h>
 #include <Fonts/Picopixel.h>
-#include <Time.h>
+#include <TimeLedMatrix.h>
 
 void Scoreboard::showScrollingText() {
   static int textX = 0;
@@ -80,12 +80,12 @@ void Scoreboard::updateScrollingText() {
 }
 
 void Scoreboard::show() {
-  display->clearDisplay();
+  clear();
   showScore();
   if (timeoutOn) 
     timeOut();
   else
     showScrollingText();
   showTime();
-  display->showBuffer();
+  showBuffer();
 }

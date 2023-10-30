@@ -2,7 +2,6 @@
 #define double_buffer
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <cstring>
@@ -18,26 +17,54 @@
 #include <Timer.h>
 #include <fauxmoESP.h>
 
-using namespace std;
 // Creates a second buffer for backround drawing (doubles the required RAM)
 
 // Pins for LED MATRIX
 #ifdef ESP32
+  #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
+  #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
+  #include "WiFi.h"
+  #include "AsyncTCP.h"
+  #include "Udp.h"
+// Change these to whatever suits
+  #define R1 27
+  #define G1 10
+  #define B1 25
+  #define R2 22
+  #define G2 13
+  #define B2 21
+  #define A 17
+  #define B 5
+  #define C 16
+  #define D 23
+  #define E -1 // required for 1/32 scan panels, like 64x64px. Any available pin would do, i.e. IO32
+  #define LAT 19
+  #define OE 32
+  #define CLK 15
 
-#define P_LAT 22
-#define P_A 19
-#define P_B 23
-#define P_C 18
-#define P_D 5
-#define P_E 15
-#define P_OE 2
-hw_timer_t * timer = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+  #define matrix_width 128 // Number of pixels wide of each INDIVIDUAL panel module. 
+  #define matrix_height 64 // Number of pixels tall of each INDIVIDUAL panel module.
+
+
+  #define NUM_ROWS 2 // Number of rows of chained INDIVIDUAL PANELS
+  #define NUM_COLS 2 // Number of INDIVIDUAL PANELS per ROW
+  #define PANEL_CHAIN NUM_ROWS*NUM_COLS    // total number of panels chained one to another
+  #define VIRTUAL_MATRIX_CHAIN_TYPE CHAIN_BOTTOM_LEFT_UP
+  
+
+  // placeholder for the matrix object
+    MatrixPanel_I2S_DMA *dma_display = nullptr;
+
+    // placeholder for the virtual display object
+    VirtualMatrixPanel  *display = nullptr;
+    uint8_t replyPacket[] = "LedMatrix";
 
 #endif
 
+uint8_t display_draw_time=10; //30-70 is usually fine
 #ifdef ESP8266
 
+#include <ESP8266WiFi.h>
 #include <Ticker.h>
 Ticker display_ticker;
 #define P_LAT 16
@@ -47,31 +74,35 @@ Ticker display_ticker;
 #define P_D 12
 #define P_E 0
 #define P_OE 2
-
-#endif
-
 #define matrix_width 64
 #define matrix_height 32
 
 // This defines the 'on' time of the display is us. The larger this number,
 // the brighter the display-> If too large the ESP will crash
-uint8_t display_draw_time=10; //30-70 is usually fine
 
 // PxMATRIX display(32,16,P_LAT, P_OE,P_A,P_B,P_C);
 PxMATRIX *display = new PxMATRIX(64,32,P_LAT, P_OE,P_A,P_B,P_C,P_D);
 //PxMATRIX display(64,64,P_LAT, P_OE,P_A,P_B,P_C,P_D,P_E);
+char replyPacket[] = "LedMatrix";
+
+#endif
+using namespace std;
+
+inline uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
+  return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+}
 
 // Some standard colors
-uint16_t myRED = display->color565(255, 0, 0);
-uint16_t myGREEN = display->color565(0, 255, 0);
-uint16_t myBLUE = display->color565(0, 0, 255);
-uint16_t myWHITE = display->color565(255, 255, 255);
-uint16_t myYELLOW = display->color565(255, 255, 0);
-uint16_t myOrange = display->color565(255, 127, 0);
-uint16_t myCYAN = display->color565(0, 255, 255);
-uint16_t myMAGENTA = display->color565(255, 0, 255);
-uint16_t myBLACK = display->color565(0, 0, 0);
-uint16_t timeoutColor = display->color565(0, 50, 50);
+uint16_t myRED = color565(255, 0, 0);
+uint16_t myGREEN = color565(0, 255, 0);
+uint16_t myBLUE = color565(0, 0, 255);
+uint16_t myWHITE = color565(255, 255, 255);
+uint16_t myYELLOW = color565(255, 255, 0);
+uint16_t myOrange = color565(255, 127, 0);
+uint16_t myCYAN = color565(0, 255, 255);
+uint16_t myMAGENTA = color565(255, 0, 255);
+uint16_t myBLACK = color565(0, 0, 0);
+uint16_t timeoutColor = color565(0, 50, 50);
 
 uint16_t myCOLORS[8]={myRED,myGREEN,myBLUE,myOrange,myYELLOW,myCYAN,myMAGENTA,myBLACK};
 
@@ -99,25 +130,6 @@ void display_updater()
 }
 #endif
 
-#ifdef ESP32
-void IRAM_ATTR display_updater(){
-  // Increment the counter and set the time of ISR
-  portENTER_CRITICAL_ISR(&timerMux);
-  display->display(display_draw_time);
-  portEXIT_CRITICAL_ISR(&timerMux);
-}
-#endif
-
-#ifdef ESP32
-void IRAM_ATTR display_updater(){
-  // Increment the counter and set the time of ISR
-  portENTER_CRITICAL_ISR(&timerMux);
-  display->display(display_draw_time);
-  portEXIT_CRITICAL_ISR(&timerMux);
-}
-#endif
-
-
 void display_update_enable(bool is_enable)
 {
 
@@ -128,20 +140,6 @@ void display_update_enable(bool is_enable)
     display_ticker.detach();
 #endif
 
-#ifdef ESP32
-  if (is_enable)
-  {
-    timer = timerBegin(0, 80, true);
-    timerAttachInterrupt(timer, &display_updater, true);
-    timerAlarmWrite(timer, 4000, true);
-    timerAlarmEnable(timer);
-  }
-  else
-  {
-    timerDetachInterrupt(timer);
-    timerAlarmDisable(timer);
-  }
-#endif
 }
 
 
@@ -158,13 +156,13 @@ const long utcOffsetInSeconds = 60*60*0;
 NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds);
 unsigned int localUdpPort = 4210;
 char incomingPacket[64*32*3];
-char replyPacket[] = "LedMatrix";
 IPAddress masterIp;
 int mode = 7;
 Scoreboard *scoreboard;
-TimeSample timeSample(display, timeClient);
-Mandel mandel(display);
-Timer timer(display);
+
+TimeSample *timeSample = nullptr;
+Mandel *mandel = nullptr;
+Timer *timer = nullptr;
 fauxmoESP fauxmo;
 
 void setupUdp();
@@ -218,16 +216,32 @@ void setupFauxmo() {
   });
 }
 
+inline void showBuffer() {
+  #ifdef ESP8266
+    display->showBuffer();
+  #endif
+}
+
+inline void clear() {
+  #ifdef ESP8266
+    display->clearDisplay();
+  #endif
+  #ifdef ESP32
+    display->clearScreen();
+  #endif
+}
+
 void setup() {
   Serial.begin(115200);
   Serial.println("Booting");
 
 // Define your display layout here, e.g. 1/8 step, and optional SPI pins begin(row_pattern, CLK, MOSI, MISO, SS)
+  #ifdef ESP8266
   display->begin(16);
   display->setFastUpdate(true);
     // Set driver chip type
 
-  display->clearDisplay();
+  clear();
   display->setTextColor(myCYAN);
   display->setTextWrap(false);
   display->setCursor(2,0);
@@ -237,13 +251,76 @@ void setup() {
   display->print("Time");
   display_update_enable(true);
   display->setDriverChip(FM6124);
-  display->showBuffer();
+  showBuffer();
+  #endif
+  #ifdef ESP32
+  //Another way of creating config structure
+  //Custom pin mapping for all pins
+  HUB75_I2S_CFG::i2s_pins _pins={R1, G1, B1, R2, G2, B2, A, B, C, D, E, LAT, OE, CLK};
+  HUB75_I2S_CFG mxconfig(
+                          64,   // width
+                          32,   // height
+                            4,   // chain length
+                        _pins,   // pin mapping
+    HUB75_I2S_CFG::FM6126A      // driver chip
+  );
+
+  // OK, now we can create our matrix object
+  dma_display = new MatrixPanel_I2S_DMA(mxconfig);
+
+  // let's adjust default brightness to about 75%
+  dma_display->setBrightness8(25);    // range is 0-255, 0 - 0%, 255 - 100%
+
+  // Allocate memory and start DMA display
+  if( not dma_display->begin() )
+      Serial.println("****** !KABOOM! I2S memory allocation failed ***********");
+
+  // create VirtualDisplay object based on our newly created dma_display object
+  display = new VirtualMatrixPanel((*dma_display), NUM_ROWS, NUM_COLS, 64, 32, VIRTUAL_MATRIX_CHAIN_TYPE);
+
+  // So far so good, so continue
+  display->fillScreen(display->color444(0, 0, 0));
+  display->drawDisplayTest(); // draw text numbering on each screen to check connectivity
+
+ // delay(1000);
+
+  Serial.println("Chain of 4x 64x32 panels for this example:");
+  Serial.println("+---------+---------+");
+  Serial.println("|    4    |    3    |");
+  Serial.println("|         |         |");
+  Serial.println("+---------+---------+");
+  Serial.println("|    1    |    2    |");
+  Serial.println("| (ESP32) |         |");
+  Serial.println("+---------+---------+");
+
+   // draw blue text
+   display->setFont(&FreeSansBold12pt7b);
+   display->setTextColor(display->color565(0, 0, 255));
+   display->setTextSize(3); 
+   display->setCursor(0, display->height()- ((display->height()-45)/2));    
+   display->print("ABCD");
+
+   // Red text inside red rect (2 pix in from edge)
+   display->drawRect(1,1, display->width()-2, display->height()-2, display->color565(255,0,0));
+
+   // White line from top left to bottom right
+   display->drawLine(0,0, display->width()-1, display->height()-1, display->color565(255,255,255));
+
+   display->drawDisplayTest(); // re draw text numbering on each screen to check connectivity
+
+  #endif
 
   setupFauxmo();
   setupWifiUpdate();
   setupUdp();
   timeClient->begin();
-  scoreboard = new Scoreboard(timeClient, display);}
+  scoreboard = new Scoreboard(timeClient, display);
+
+  timeSample = new TimeSample(display, timeClient);
+  mandel = new Mandel(display);
+  timer = new Timer(display);
+
+}
 
 
 void setupUdp() {
@@ -256,12 +333,12 @@ void detect() {
   // send back a reply, to the IP address and port we got the packet from
   masterIp = Udp.remoteIP();
   Udp.beginPacket(masterIp, 4445);
-  Udp.write(replyPacket);
+  Udp.write(replyPacket, 10);
   Udp.endPacket();
   Serial.println("Detect received.");
-  display->clearDisplay();
-  display->showBuffer();
-  display->clearDisplay();
+  clear();
+  showBuffer();
+  clear();
   for(int i = 0; i < matrix_width; i++) {
     display->drawFastVLine(i,0,31,myRED);
     display->setCursor(10,10);
@@ -269,19 +346,19 @@ void detect() {
     display->setTextSize(1);
     display->print("Detect");
     myDelay(20);
-    display->showBuffer();
+    showBuffer();
   }
-  display->clearDisplay();
-  display->showBuffer();
-  display->clearDisplay();
+  clear();
+  showBuffer();
+  clear();
 }
 
 void displayOff() {
   off = true;
-  display->clearDisplay();
-  display->showBuffer();
-  display->clearDisplay();
-  display->showBuffer();
+  clear();
+  showBuffer();
+  clear();
+  showBuffer();
 }
 
 void displayPicture() {
@@ -294,7 +371,7 @@ void displayPicture() {
     }
     
   }
-  display->showBuffer();
+  showBuffer();
 }
 
 void receiveUdp() {
@@ -360,29 +437,29 @@ void receiveUdp() {
       mode = 30;
       uint16_t timeToSet = incomingPacket[6] << 8 | incomingPacket[7];
       Serial.printf("Timer: %d", timeToSet);
-      timer.setTimer(timeToSet);
+      timer->setTimer(timeToSet);
 
       return;
     }
     if (std::strcmp(incomingPacket,"timerStart") == 0) {
-      timer.start();
+      timer->start();
       return;
     }
     if (std::strcmp(incomingPacket,"stopWatch") == 0) {
       mode = 30;
-      timer.stopWatch();
+      timer->stopWatch();
       return;
     }
     if (std::strcmp(incomingPacket,"stopWatchStart") == 0) {
-      timer.stopWatchStart();
+      timer->stopWatchStart();
       return;
     }
     if (std::strcmp(incomingPacket,"stopWatchStop") == 0) {
-      timer.stopWatchStop();
+      timer->stopWatchStop();
       return;
     }
     if (std::strcmp(incomingPacket,"timerPause") == 0) {
-      timer.pause();
+      timer->pause();
       return;
     }
     if (std::strcmp(incomingPacket,"timeout") == 0) {
@@ -463,35 +540,35 @@ void loop() {
       myDelay(30);
       break;
     case 2:
-      timeSample.timeSample1();
+      timeSample->timeSample1();
       myDelay(30);
       break;
     case 3:
-      timeSample.timeSample2();
+      timeSample->timeSample2();
       myDelay(30);
       break;
     case 4:
-      timeSample.timeSample3();
+      timeSample->timeSample3();
       myDelay(1);
       break;
     case 5:
-      timeSample.timeSample4();
+      timeSample->timeSample4();
       myDelay(1);
       break;
     case 6:
-      timeSample.timeSnow();
+      timeSample->timeSnow();
       myDelay(30);
       break;
     case 7:
-      timeSample.timePlasma();
+      timeSample->timePlasma();
       myDelay(30);
       break;
     case 60:
-      mandel.mandelbrot();
+      mandel->mandelbrot();
       myDelay(1);
       break;
     case 30:
-      timer.show();
+      timer->show();
       myDelay(1);
       break;
     default:

@@ -5,10 +5,16 @@
 #include <PxMatrix.h>
 #include <complex>
 
+#ifdef ESP8266
 Mandel::Mandel(PxMATRIX *display)
+#endif
+#ifdef ESP32
+Mandel::Mandel(VirtualMatrixPanel *display)
+#endif
 {
     this->display = display;
 }
+
 
 Mandel::~Mandel()
 {
@@ -35,7 +41,7 @@ int Mandel::value(double real, double imag)
 }
 
 void Mandel::draw_deep(double x_start, double x_fin, double y_start, double y_fin) {
-  display->clearDisplay();
+  clear();
   zoomMandelbrot *= 0.99;
 
   int width = 64; //number of characters fitting horizontally on my screen 
@@ -58,7 +64,7 @@ void Mandel::draw_deep(double x_start, double x_fin, double y_start, double y_fi
       display->drawPixelRGB888(j, i, c, 0, 0);
     }
   }
-  display->showBuffer();
+  showBuffer();
 }
 
 
