@@ -10,31 +10,53 @@ void Scoreboard::showScrollingText() {
   static int textX = 0;
   display->setTextSize(1);
   display->setTextColor(myGREEN);
-  display->setCursor(65 - textX++, 25);
-  int size = display->print(scrollingText)*6 + 64;
+  display->setCursor(matrix_width + 1 - textX++, matrix_height-7);
+  int size = display->print(scrollingText)*6 + matrix_width;
   if (textX > size) {
     textX = 0;
   }
 }
 
 void Scoreboard::showScore() {
+#ifdef ESP32
+  display->setTextSize(4);
+#elif
   display->setTextSize(2);
+#endif
+
   display->setCursor(3,0);
   display->setTextColor(myWHITE);
   display->printf("%02d:%02d", pointsLeft, pointsRight);
 
+  display->setTextColor(myRED);
+#ifdef ESP32
+  display->setCursor(2, 30);
+  display->setTextSize(2);
+  display->print(setsLeft);
+  display->setCursor(116, 30);
+  display->print(setsRight);
+#elif
   display->setCursor(0, 15);
   display->setTextSize(1);
-  display->setTextColor(myRED);
   display->print(setsLeft);
-  display->setCursor(59, 15);
+  display->setCursor(120, 30);
   display->print(setsRight);
+#endif
 
+#ifdef ESP32
+  if (teamLeftServes) {
+    display->fillCircle(17, 37, 4, myYELLOW); 
+  } else {
+    display->fillCircle(110, 37, 4, myYELLOW);
+  }
+#elif
   if (teamLeftServes) {
     display->fillCircle(11, 18, 3, myYELLOW); 
   } else {
     display->fillCircle(51, 18, 3, myYELLOW); 
   }
+#endif
+
 }
 
 void Scoreboard::showTime() {
@@ -43,9 +65,14 @@ void Scoreboard::showTime() {
   time_t local = myTZ.toLocal(utc, &tcr);
 
   display->setTextSize(1);
-  display->setFont(&Picopixel);
   display->setTextColor(myMAGENTA);
+#ifdef ESP32
+  display->setCursor(40, 32);
+#elif
   display->setCursor(18, 20);
+  display->setFont(&Picopixel);
+#endif
+
   display->printf("%02d:%02d:%02d", hour(local), minute(local), second(local));
   display->setFont();
 }
@@ -55,11 +82,17 @@ void Scoreboard::timeOut() {
   if (secs > 30000) {
     timeoutOn = false;
   }
-  int width = secs/30000.0 * 64;
-  display->fillRect(0, 24, width,8, timeoutColor);
+  int width = secs/30000.0 * matrix_width;
+  display->fillRect(0, matrix_height - 8, width,8, timeoutColor);
 
+  display->setTextSize(1);
   display->setTextColor(myOrange);
-  display->setCursor(4, 25);
+#ifdef ESP32
+  display->setCursor(40, matrix_height - 7);
+#elif
+  display->setCursor(4, matrix_height - 7);
+#endif
+
   display->printf("T-Out:%ds", 30-(secs/1000));
 }
 

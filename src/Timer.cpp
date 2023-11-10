@@ -6,8 +6,10 @@
 
 #ifdef ESP8266
 Timer::Timer(PxMATRIX *display)
+#define TEXTSIZE 2
 #endif
 #ifdef ESP32
+#define TEXTSIZE 4
 Timer::Timer(VirtualMatrixPanel *display)
 #endif
 {
@@ -43,7 +45,7 @@ void Timer::showTimer() {
     static long blinkingStart = 0;
 
     clear();
-    display->setTextSize(2);
+    display->setTextSize(TEXTSIZE);
     uint32_t c32 = Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::ColorHSV(65536 - 65536L*3/4*elapsed/timer));
     uint16_t color = display->color565((c32 & 0xff0000) >> 16, (c32 & 0xff00) >> 8, c32 & 0xff);
     display->setTextColor(color);
@@ -75,7 +77,7 @@ void Timer::showTimer() {
 
 void Timer::showStopWatch() {
     clear();
-    display->setTextSize(2);
+    display->setTextSize(TEXTSIZE);
     uint32_t c32 = Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::ColorHSV(65536 * elapsed / 30));
     uint16_t color = display->color565((c32 & 0xff0000) >> 16, (c32 & 0xff00) >> 8, c32 & 0xff);
 

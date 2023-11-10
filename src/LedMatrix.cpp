@@ -292,7 +292,7 @@ void setup() {
    display->setTextColor(display->color565(0, 0, 255));
    display->setTextSize(3); 
    display->setCursor(0, display->height()/2-10);    
-   display->print("ABCDEFG");
+   display->print("ABCDEFGHI");
 
    // Red text inside red rect (2 pix in from edge)
    display->drawRect(1,1, display->width()-2, display->height()-2, display->color565(255,0,0));
@@ -556,7 +556,7 @@ void loop() {
       break;
     case 6:
       timeSample->timeSnow();
-      myDelay(30);
+      myDelay(20);
       break;
     case 7:
       timeSample->timePlasma();
