@@ -42,14 +42,10 @@
   #define OE 32
   #define CLK 15
 
-  #define matrix_width 128 // Number of pixels wide of each INDIVIDUAL panel module. 
-  #define matrix_height 64 // Number of pixels tall of each INDIVIDUAL panel module.
-
-
   #define NUM_ROWS 2 // Number of rows of chained INDIVIDUAL PANELS
   #define NUM_COLS 2 // Number of INDIVIDUAL PANELS per ROW
   #define PANEL_CHAIN NUM_ROWS*NUM_COLS    // total number of panels chained one to another
-  #define VIRTUAL_MATRIX_CHAIN_TYPE CHAIN_BOTTOM_LEFT_UP
+  #define VIRTUAL_MATRIX_CHAIN_TYPE CHAIN_BOTTOM_RIGHT_UP
   
 
   // placeholder for the matrix object
@@ -74,8 +70,6 @@ Ticker display_ticker;
 #define P_D 12
 #define P_E 0
 #define P_OE 2
-#define matrix_width 64
-#define matrix_height 32
 
 // This defines the 'on' time of the display is us. The larger this number,
 // the brighter the display-> If too large the ESP will crash
@@ -157,7 +151,7 @@ NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds
 unsigned int localUdpPort = 4210;
 char incomingPacket[64*32*3];
 IPAddress masterIp;
-int mode = 7;
+int mode = 2;
 Scoreboard *scoreboard;
 
 TimeSample *timeSample = nullptr;
@@ -261,15 +255,14 @@ void setup() {
                           64,   // width
                           32,   // height
                             4,   // chain length
-                        _pins,   // pin mapping
-    HUB75_I2S_CFG::FM6126A      // driver chip
+                        _pins   // pin mapping
+    //HUB75_I2S_CFG::FM6126A      // driver chip
   );
-
+  mxconfig.double_buff = true;
   // OK, now we can create our matrix object
   dma_display = new MatrixPanel_I2S_DMA(mxconfig);
 
   // let's adjust default brightness to about 75%
-  dma_display->setBrightness8(25);    // range is 0-255, 0 - 0%, 255 - 100%
 
   // Allocate memory and start DMA display
   if( not dma_display->begin() )
@@ -281,8 +274,8 @@ void setup() {
   // So far so good, so continue
   display->fillScreen(display->color444(0, 0, 0));
   display->drawDisplayTest(); // draw text numbering on each screen to check connectivity
-
- // delay(1000);
+  dma_display->setBrightness8(20);    // range is 0-255, 0 - 0%, 255 - 100%
+  display->flipDMABuffer();
 
   Serial.println("Chain of 4x 64x32 panels for this example:");
   Serial.println("+---------+---------+");
@@ -292,26 +285,29 @@ void setup() {
   Serial.println("|    1    |    2    |");
   Serial.println("| (ESP32) |         |");
   Serial.println("+---------+---------+");
+  // delay(3000);
 
    // draw blue text
-   display->setFont(&FreeSansBold12pt7b);
+   // display->setFont(&FreeSansBold12pt7b);
    display->setTextColor(display->color565(0, 0, 255));
    display->setTextSize(3); 
-   display->setCursor(0, display->height()- ((display->height()-45)/2));    
-   display->print("ABCD");
+   display->setCursor(0, display->height()/2-10);    
+   display->print("ABCDEFG");
 
    // Red text inside red rect (2 pix in from edge)
    display->drawRect(1,1, display->width()-2, display->height()-2, display->color565(255,0,0));
 
    // White line from top left to bottom right
    display->drawLine(0,0, display->width()-1, display->height()-1, display->color565(255,255,255));
-
-   display->drawDisplayTest(); // re draw text numbering on each screen to check connectivity
+   display->flipDMABuffer();
+   //display->drawDisplayTest(); // re draw text numbering on each screen to check connectivity
 
   #endif
+  Serial.println("finished");
+  // delay(5000);
 
-  setupFauxmo();
   setupWifiUpdate();
+  // setupFauxmo();
   setupUdp();
   timeClient->begin();
   scoreboard = new Scoreboard(timeClient, display);
@@ -431,6 +427,9 @@ void receiveUdp() {
     }
     if (strstr(incomingPacket,"brightness=") != NULL) {
       display_draw_time = incomingPacket[11];
+      #ifdef ESP32
+        dma_display->setBrightness8(display_draw_time*3);
+      #endif
       return;
     }
     if (strstr(incomingPacket,"timer=") != NULL) {
@@ -545,7 +544,7 @@ void loop() {
       break;
     case 3:
       timeSample->timeSample2();
-      myDelay(30);
+      myDelay(1);
       break;
     case 4:
       timeSample->timeSample3();
@@ -561,7 +560,7 @@ void loop() {
       break;
     case 7:
       timeSample->timePlasma();
-      myDelay(30);
+      myDelay(1);
       break;
     case 60:
       mandel->mandelbrot();

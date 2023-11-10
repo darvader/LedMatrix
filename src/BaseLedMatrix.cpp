@@ -13,5 +13,8 @@ void BaseLedMatrix::showBuffer() {
   #ifdef ESP8266
     display->showBuffer();
   #endif
+  #ifdef ESP32
+    display->flipDMABuffer();
+  #endif
 }
 

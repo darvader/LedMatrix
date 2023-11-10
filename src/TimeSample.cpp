@@ -28,7 +28,7 @@ struct line_t {
   uint16_t color;
   int16_t x1, x2, y1, y2;
   double arc;
-  int degree;
+  double degree;
 };
 
 enum Snow { small, medium, large };
@@ -39,7 +39,18 @@ struct snow_t {
 };
 
 void TimeSample::drawTimeWithBackground() {
-  display->fillRect(9, 10, 49, 9, myBLACK);
+  #ifdef ESP8266
+  static int x = 1;
+  #else
+  static int x = 4;
+  #endif
+  static int width = display->width();
+  static int height = display->height();
+#ifdef ESP32
+  display->fillRect(39, height/2-5, 49, 9, myBLACK);
+#elif
+  display->fillRect(9, height/2-6, 49*x, 9*x, myBLACK);
+#endif
   drawTime();
 }
 
@@ -48,9 +59,13 @@ void inline TimeSample::drawTime() {
   time_t utc = timeClient->getEpochTime();
   time_t local = myTZ.toLocal(utc, &tcr);
 
-
+#ifdef ESP32
   display->setTextSize(1);
-  display->setCursor(10,11);
+  display->setCursor(40, (display->height()/2)-4);
+#elif
+  display->setTextSize(1);
+  display->setCursor(10, (display->height()/2)-7);
+#endif
   display->setTextColor(myMAGENTA);
   display->printf("%02d:%02d:%02d", hour(local), minute(local), second(local));
 }
@@ -60,19 +75,21 @@ void TimeSample::timeSample1() {
   static int y = 0;
   static int stepX = 1;
   static int stepY = 1;
+  static int width = display->width()-1;
+  static int height = display->height()-1;
 
-  if (x == 63) stepX = -1;
+  if (x == width) stepX = -1;
   if (x == 0) stepX = 1;
-  if (y == 31) stepY = -1;
+  if (y == height) stepY = -1;
   if (y == 0) stepY = 1;
 
   clear();
   
 
-  display->drawLine(x, 0, 63-x, 31, myRED);
-  display->drawLine(63-x, 0, x, 31, myBLUE);
-  display->drawLine(0, y, 63, 31-y, myGREEN);
-  display->drawLine(0, 31-y, 63, y, myYELLOW);
+  display->drawLine(x, 0, width-x, height, myRED);
+  display->drawLine(width-x, 0, x, height, myBLUE);
+  display->drawLine(0, y, width, height-y, myGREEN);
+  display->drawLine(0, height-y, width, y, myYELLOW);
 
   drawTimeWithBackground();
 
@@ -87,14 +104,16 @@ void TimeSample::timeSample2() {
   static const int size = 10; 
   static line_t lines[size];
   static boolean initialized = false;
-  static byte radius = 35;
+  static const byte width = matrix_width/2; 
+  static const byte height = matrix_height/2; 
+  static byte radius = width+5;
 
   if (!initialized) {
     for (int i = 0; i < size; i++) {
-      lines[i].x1 = sin(i * PI/size) * radius + 32;
-      lines[i].y1 = cos(i * PI/size) * radius + 16;
-      lines[i].x2 = sin(i * PI/size + PI) * radius + 32;
-      lines[i].y2 = cos(i * PI/size + PI) * radius + 16;
+      lines[i].x1 = sin(i * PI/size) * radius + width;
+      lines[i].y1 = cos(i * PI/size) * radius + height;
+      lines[i].x2 = sin(i * PI/size + PI) * radius + width;
+      lines[i].y2 = cos(i * PI/size + PI) * radius + height;
 
       lines[i].color = myCOLORS[i % 7];
       lines[i].arc = i * PI/size;
@@ -107,15 +126,15 @@ void TimeSample::timeSample2() {
   for (int i = 0; i<size; i++) {
     display->drawLine(lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
 
-    lines[i].arc -= PI * 2/180; // 2 degree more
+    lines[i].arc -= PI * 0.2/180; // 2 degree more
 
     if (lines[i].arc < 2 * PI) lines[i].arc += 2 * PI;
 
     double arc = lines[i].arc;
-    lines[i].x1 = sin(arc) * radius + 32;
-    lines[i].y1 = cos(arc) * radius + 16;
-    lines[i].x2 = sin(arc + PI) * radius + 32;
-    lines[i].y2 = cos(arc + PI) * radius + 16;
+    lines[i].x1 = sin(arc) * radius + width;
+    lines[i].y1 = cos(arc) * radius + height;
+    lines[i].x2 = sin(arc + PI) * radius + width;
+    lines[i].y2 = cos(arc + PI) * radius + height;
   }
   drawTimeWithBackground();
 
@@ -126,15 +145,15 @@ void TimeSample::timeSample3() {
   static const int size = 20; 
   static line_t lines[size];
   static boolean initialized = false;
-  static byte radius = 37;
+  static byte radius = matrix_width/2+5;
   static const int step = 360/size; 
   static int xVals[360];
   static int yVals[360];
 
   if (!initialized) {
     for (int i = 0; i < 360; i++) {
-      xVals[i] = sin(i/180.0 * PI) * radius + 32;
-      yVals[i] = cos(i/180.0 * PI) * radius + 16;
+      xVals[i] = sin(i/180.0 * PI) * radius + matrix_width/2;
+      yVals[i] = cos(i/180.0 * PI) * radius + matrix_height/2;
     }
 
     for (int i = 0; i < size; i++) {
@@ -155,10 +174,10 @@ void TimeSample::timeSample3() {
   clear();
 
   for (int i = 0; i<size; i++) {
-    lines[i].degree -= 2; // 2 degree more
+    lines[i].degree -= 0.2; // 2 degree more
     if (lines[i].degree < 0) lines[i].degree += 360;
 
-    display->fillTriangle(32, 16, lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
+    display->fillTriangle(matrix_width/2, matrix_height/2, lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
 
     int degree = lines[i].degree;
     lines[i].x1 = xVals[degree];
@@ -175,18 +194,20 @@ void TimeSample::timeSample3() {
 
 void TimeSample::timeSample4() {
   timeClient->update();
-  static const int size = 30; 
+  static const int size = 60; 
   static line_t lines[size];
   static boolean initialized = false;
-  static byte radius = 37;
   static const int step = 360/size; 
   static int xVals[360];
   static int yVals[360];
+  static int width = display->width();
+  static int height = display->height();
+  static byte radius = height + 10;
 
   if (!initialized) {
     for (int i = 0; i < 360; i++) {
-      xVals[i] = sin(i/180.0 * PI) * radius + 32;
-      yVals[i] = cos(i/180.0 * PI) * radius + 16;
+      xVals[i] = sin(i/180.0 * PI) * radius + width/2;
+      yVals[i] = cos(i/180.0 * PI) * radius + height/2;
     }
 
     for (int i = 0; i < size; i++) {
@@ -203,12 +224,32 @@ void TimeSample::timeSample4() {
 
     initialized = true;
   }
+
+  clear();
+
+  for (int i = 0; i<size; i++) {
+    lines[i].degree -= 2; // 2 degree more
+    if (lines[i].degree < 0) lines[i].degree += 360;
+
+    display->fillTriangle(width/2, height/2, lines[i].x1, lines[i].y1, lines[i].x2, lines[i].y2, lines[i].color);
+
+    int degree = lines[i].degree;
+    lines[i].x1 = xVals[degree];
+    lines[i].y1 = yVals[degree];
+    int step2 = degree + step;
+    if (step2 >= 360) step2 -= 360;
+    lines[i].x2 = xVals[step2];
+    lines[i].y2 = yVals[step2];
+  }
+  drawTimeWithBackground();
+
+  showBuffer();
 }
 
   void TimeSample::timePlasma()
   {
-    static int PANE_WIDTH = 64;
-    static int PANE_HEIGHT = 32;
+    static int PANE_WIDTH = display->width();
+    static int PANE_HEIGHT = display->height();
     static uint16_t time_counter = 0, cycles = 0, fps = 0;
     static unsigned long fps_timer;
     static CRGB currentColor;
@@ -217,12 +258,14 @@ void TimeSample::timeSample4() {
 
     timeClient->update();
 
-    clear();
+    // clear();
 
 
     for (int x = 0; x < PANE_WIDTH; x++)
     {
-      if (x % 4 == 0) yield(); // let update the display, otherwise it flickers
+      #ifdef ESP8266
+        if (x % 4 == 0) yield(); // let update the display, otherwise it flickers
+      #endif
       for (int y = 0; y < PANE_HEIGHT; y++)
       {
         int16_t v = 0;
@@ -268,9 +311,16 @@ uint16_t static mediumSnow[] = {0x0000, 0xffff, 0x0000,
 
 void TimeSample::timeSnow() {
   static boolean initialized = false;
-  static const int numSmallSnows = 60; 
+  #ifdef ESP8266
+  static const int size = 1;
+  #else
+  static const int size = 4;
+  #endif
+  static const int numSmallSnows = 60*size; 
   static const int numMediumSnows = 10; 
   static const int numLargeSnows = 10; 
+  static const int width = display->width()-1; 
+  static const int height = display->height()-1; 
 
   static snow_t smallSnows[numSmallSnows];
   static snow_t mediumSnows[numMediumSnows];
@@ -280,8 +330,8 @@ void TimeSample::timeSnow() {
   if (!initialized) {
     for (int i = 0; i < numSmallSnows; i++) {
       smallSnows[i].type = small;
-      smallSnows[i].x = random(63);
-      smallSnows[i].y = random(31);
+      smallSnows[i].x = random(width);
+      smallSnows[i].y = random(height);
       smallSnows[i].speed = random(3, 10)/10.0f;
     }    
 
@@ -294,8 +344,8 @@ void TimeSample::timeSnow() {
   for (int i = 0; i < numSmallSnows; i++) {
     display->drawPixelRGB888(smallSnows[i].x, smallSnows[i].y, 0xff*smallSnows[i].speed, 0xff*smallSnows[i].speed, 0xff*smallSnows[i].speed);
     smallSnows[i].y += smallSnows[i].speed;
-    if (smallSnows[i].y > 31) {
-      smallSnows[i].x = random(63); 
+    if (smallSnows[i].y > height) {
+      smallSnows[i].x = random(width); 
       smallSnows[i].y = 0;
       smallSnows[i].speed = random(3,10)/10.0f;
     }

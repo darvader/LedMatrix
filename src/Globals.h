@@ -34,3 +34,11 @@ extern TimeChangeRule *tcr;        // pointer to the time change rule, use to ge
 #define double_buffer
 
 #endif
+
+#ifdef ESP8266
+    #define matrix_width 64
+    #define matrix_height 32
+#else
+    #define matrix_width 128 // Number of pixels wide of each INDIVIDUAL panel module. 
+    #define matrix_height 64 // Number of pixels tall of each INDIVIDUAL panel module.
+#endif
