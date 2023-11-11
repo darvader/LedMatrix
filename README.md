@@ -1,5 +1,6 @@
 # LedMatrix
-This projects runs a HUB75 RGB LED matrix panel with either an ESP8266 or ESP32
+This projects runs a HUB75 RGB LED matrix panel with either an ESP8266 or ESP32 and it is controlled by this Android App.
+[Smart Home](https://github.com/darvader/SmartHome)
 
 # License
 [see license](LICENSE.txt)
