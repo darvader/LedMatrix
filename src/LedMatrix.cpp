@@ -292,6 +292,7 @@ void setup() {
    display->setTextColor(display->color565(0, 0, 255));
    display->setTextSize(3); 
    display->setCursor(0, display->height()/2-10);    
+   display->setTextWrap(false);
    display->print("ABCDEFGHI");
 
    // Red text inside red rect (2 pix in from edge)
