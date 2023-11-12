@@ -8,10 +8,17 @@
 
 void Scoreboard::showScrollingText() {
   static int textX = 0;
-  display->setTextSize(1);
   display->setTextColor(myGREEN);
+#ifdef ESP32
+  display->setTextSize(2);
+  display->setCursor(matrix_width + 1 - textX++, matrix_height-16);
+  int size = display->print(scrollingText)*12 + matrix_width;
+#elif
+  display->setTextSize(1);
   display->setCursor(matrix_width + 1 - textX++, matrix_height-7);
   int size = display->print(scrollingText)*6 + matrix_width;
+#endif
+
   if (textX > size) {
     textX = 0;
   }
@@ -20,20 +27,21 @@ void Scoreboard::showScrollingText() {
 void Scoreboard::showScore() {
 #ifdef ESP32
   display->setTextSize(4);
+  display->setCursor(3,1);
 #elif
   display->setTextSize(2);
+  display->setCursor(3,0);
 #endif
 
-  display->setCursor(3,0);
   display->setTextColor(myWHITE);
   display->printf("%02d:%02d", pointsLeft, pointsRight);
 
   display->setTextColor(myRED);
 #ifdef ESP32
-  display->setCursor(2, 30);
+  display->setCursor(2, 31);
   display->setTextSize(2);
   display->print(setsLeft);
-  display->setCursor(116, 30);
+  display->setCursor(116, 31);
   display->print(setsRight);
 #elif
   display->setCursor(0, 15);
@@ -45,9 +53,9 @@ void Scoreboard::showScore() {
 
 #ifdef ESP32
   if (teamLeftServes) {
-    display->fillCircle(17, 37, 4, myYELLOW); 
+    display->fillCircle(17, 38, 4, myYELLOW); 
   } else {
-    display->fillCircle(110, 37, 4, myYELLOW);
+    display->fillCircle(110, 38, 4, myYELLOW);
   }
 #elif
   if (teamLeftServes) {
@@ -67,7 +75,7 @@ void Scoreboard::showTime() {
   display->setTextSize(1);
   display->setTextColor(myMAGENTA);
 #ifdef ESP32
-  display->setCursor(40, 32);
+  display->setCursor(40, 33);
 #elif
   display->setCursor(18, 20);
   display->setFont(&Picopixel);
