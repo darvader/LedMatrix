@@ -147,11 +147,12 @@ WiFiUDP Udp;
 WiFiUDP UdpNtp;
 
 const long utcOffsetInSeconds = 60*60*0;
-NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds);
+NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds, 300*1000);
 unsigned int localUdpPort = 4210;
-char incomingPacket[64*32*3];
+char incomingPacket[255];
+//char incomingPacket[64*32*3];
 IPAddress masterIp;
-int mode = 2;
+int mode = 6;
 Scoreboard *scoreboard;
 
 TimeSample *timeSample = nullptr;
@@ -213,6 +214,8 @@ void setupFauxmo() {
 inline void showBuffer() {
   #ifdef ESP8266
     display->showBuffer();
+  #else
+    display->flipDMABuffer();
   #endif
 }
 
@@ -237,7 +240,6 @@ void setup() {
 
   clear();
   display->setTextColor(myCYAN);
-  display->setTextWrap(false);
   display->setCursor(2,0);
   display->print("Pixel");
   display->setTextColor(myMAGENTA);
@@ -274,7 +276,7 @@ void setup() {
   // So far so good, so continue
   display->fillScreen(display->color444(0, 0, 0));
   display->drawDisplayTest(); // draw text numbering on each screen to check connectivity
-  dma_display->setBrightness8(20);    // range is 0-255, 0 - 0%, 255 - 100%
+  dma_display->setBrightness8(100);    // range is 0-255, 0 - 0%, 255 - 100%
   display->flipDMABuffer();
 
   Serial.println("Chain of 4x 64x32 panels for this example:");
@@ -292,7 +294,6 @@ void setup() {
    display->setTextColor(display->color565(0, 0, 255));
    display->setTextSize(3); 
    display->setCursor(0, display->height()/2-10);    
-   display->setTextWrap(false);
    display->print("ABCDEFGHI");
 
    // Red text inside red rect (2 pix in from edge)
@@ -305,7 +306,7 @@ void setup() {
 
   #endif
   Serial.println("finished");
-  // delay(5000);
+  display->setTextWrap(false);
 
   setupWifiUpdate();
   // setupFauxmo();
@@ -336,13 +337,13 @@ void detect() {
   clear();
   showBuffer();
   clear();
-  for(int i = 0; i < matrix_width; i++) {
-    display->drawFastVLine(i,0,31,myRED);
+  for(int i = 0; i < matrix_width; i+=2) {
+    display->drawFastVLine(i,0,matrix_height,myRED);
     display->setCursor(10,10);
     display->setTextColor(myGREEN);
     display->setTextSize(1);
     display->print("Detect");
-    myDelay(20);
+    myDelay(10);
     showBuffer();
   }
   clear();
@@ -524,7 +525,7 @@ void receiveUdp() {
 void myDelay(ulong millisecs) {
   long time = millis();
   while (millis() - time < millisecs) {
-    fauxmo.handle();
+    // fauxmo.handle();
     ArduinoOTA.handle();
     receiveUdp();
     yield();
