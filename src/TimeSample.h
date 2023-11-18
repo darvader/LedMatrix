@@ -7,6 +7,7 @@ private:
     /* data */
 public:
     NTPClient *timeClient;
+    boolean initializedSnow = false;
 
 #ifdef ESP8266
     TimeSample(PxMATRIX *display, NTPClient *timeClient);
@@ -23,6 +24,6 @@ public:
     void timeSample3();
     void timeSample4();
     void timePlasma();
-    void timeSnow();
+    void timeSnow(bool colored);
 };
 

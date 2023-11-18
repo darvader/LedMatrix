@@ -36,6 +36,8 @@ struct snow_t {
   Snow type;
   float x, y;
   float speed;
+  float color;
+  uint8_t r, g, b;
 };
 
 void TimeSample::drawTimeWithBackground() {
@@ -308,9 +310,7 @@ uint16_t static mediumSnow[] = {0x0000, 0xffff, 0x0000,
                                 0x0000, 0xffff, 0x0000};
 
 
-
-void TimeSample::timeSnow() {
-  static boolean initialized = false;
+void TimeSample::timeSnow(bool colored) {
   #ifdef ESP8266
   static const int size = 1;
   #else
@@ -327,27 +327,41 @@ void TimeSample::timeSnow() {
   static snow_t largeSnows[numLargeSnows];
   static snow_t snow;
 
-  if (!initialized) {
+  if (!initializedSnow) {
     for (int i = 0; i < numSmallSnows; i++) {
-      smallSnows[i].type = small;
-      smallSnows[i].x = random(width);
-      smallSnows[i].y = random(height);
-      smallSnows[i].speed = random(3, 10)/10.0f;
+      snow_t* snow = &smallSnows[i];
+      snow->type = small;
+      snow->x = random(width);
+      snow->y = random(height);
+      snow->speed = random(1, 10)/10.0f;
+      if (colored) {
+        snow->r = random(255);
+        snow->b = random(255);
+        snow->g = random(255);
+      }
     }    
 
-    initialized = true;
+    initializedSnow = true;
   }
 
   timeClient->update();
   clear();
 
   for (int i = 0; i < numSmallSnows; i++) {
-    display->drawPixelRGB888(smallSnows[i].x, smallSnows[i].y, 0xff*smallSnows[i].speed, 0xff*smallSnows[i].speed, 0xff*smallSnows[i].speed);
-    smallSnows[i].y += smallSnows[i].speed;
-    if (smallSnows[i].y > height) {
-      smallSnows[i].x = random(width); 
-      smallSnows[i].y = 0;
-      smallSnows[i].speed = random(3,10)/10.0f;
+      snow_t* sn = &smallSnows[i];
+    if (colored) {
+      uint8_t r = sn->r * sn->speed;
+      uint8_t g = sn->g * sn->speed;
+      uint8_t b = sn->b * sn->speed;
+      display->drawPixelRGB888(sn->x, sn->y, r, g, b);
+    } else {
+      display->drawPixelRGB888(sn->x, sn->y, 0xff*sn->speed, 0xff*sn->speed, 0xff*sn->speed);
+    }
+    sn->y += sn->speed;
+    if (sn->y > height) {
+      sn->x = random(width); 
+      sn->y = 0;
+      sn->speed = random(3,10)/10.0f;
     }
   }  
 

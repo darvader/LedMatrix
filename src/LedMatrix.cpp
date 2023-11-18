@@ -7,7 +7,6 @@
 #include <cstring>
 #include <WifiUpdate.h>
 #include <NTPClient.h>
-#include <complex>
 #include <FFTLed.h>
 #include <scoreboard.h>
 #include <Globals.h>
@@ -15,16 +14,14 @@
 #include <TimeSample.h>
 #include <Mandel.h>
 #include <Timer.h>
-#include <fauxmoESP.h>
-
-// Creates a second buffer for backround drawing (doubles the required RAM)
+// #include <SPIFFS.h>
 
 // Pins for LED MATRIX
 #ifdef ESP32
   #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
   #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
   #include "WiFi.h"
-  #include "AsyncTCP.h"
+ // #include "AsyncTCP.h"
   #include "Udp.h"
 // Change these to whatever suits
   #define R1 27
@@ -152,20 +149,20 @@ unsigned int localUdpPort = 4210;
 char incomingPacket[255];
 //char incomingPacket[64*32*3];
 IPAddress masterIp;
-int mode = 6;
+int mode = 8;
 Scoreboard *scoreboard;
 
 TimeSample *timeSample = nullptr;
 Mandel *mandel = nullptr;
 Timer *timer = nullptr;
-fauxmoESP fauxmo;
+// fauxmoESP fauxmo;
 
 void setupUdp();
 void receiveUdp();
 void displayOff();
 void myDelay(ulong millisecs);
 
-void setupFauxmo() {
+/*void setupFauxmo() {
   fauxmo.addDevice("Uhr 1");
   fauxmo.addDevice("Uhr 2");
   fauxmo.addDevice("Uhr 3");
@@ -209,7 +206,7 @@ void setupFauxmo() {
       }
 
   });
-}
+}*/
 
 inline void showBuffer() {
   #ifdef ESP8266
@@ -226,6 +223,14 @@ inline void clear() {
   #ifdef ESP32
     display->clearScreen();
   #endif
+}
+
+void logMemory() {
+  log_d("Total heap: %d", ESP.getHeapSize());
+  log_d("Free heap: %d", ESP.getFreeHeap());
+  log_d("Min Free heap: %d", ESP.getMinFreeHeap());
+  log_d("Total PSRAM: %d", ESP.getPsramSize());
+  log_d("Free SketchSpace: %d", ESP.getFreeSketchSpace());
 }
 
 void setup() {
@@ -276,7 +281,7 @@ void setup() {
   // So far so good, so continue
   display->fillScreen(display->color444(0, 0, 0));
   display->drawDisplayTest(); // draw text numbering on each screen to check connectivity
-  dma_display->setBrightness8(100);    // range is 0-255, 0 - 0%, 255 - 100%
+  dma_display->setBrightness8(120);    // range is 0-255, 0 - 0%, 255 - 100%
   display->flipDMABuffer();
 
   Serial.println("Chain of 4x 64x32 panels for this example:");
@@ -295,7 +300,7 @@ void setup() {
    display->setTextSize(3); 
    display->setCursor(0, display->height()/2-10);    
    display->print("ABCDEFGHI");
-
+   
    // Red text inside red rect (2 pix in from edge)
    display->drawRect(1,1, display->width()-2, display->height()-2, display->color565(255,0,0));
 
@@ -303,7 +308,6 @@ void setup() {
    display->drawLine(0,0, display->width()-1, display->height()-1, display->color565(255,255,255));
    display->flipDMABuffer();
    //display->drawDisplayTest(); // re draw text numbering on each screen to check connectivity
-
   #endif
   Serial.println("finished");
   display->setTextWrap(false);
@@ -317,6 +321,7 @@ void setup() {
   timeSample = new TimeSample(display, timeClient);
   mandel = new Mandel(display);
   timer = new Timer(display);
+  logMemory();
 
 }
 
@@ -377,7 +382,7 @@ void receiveUdp() {
 
   if (packetSize)
   {
-    int len = Udp.read(incomingPacket, 6144);
+    int len = Udp.read(incomingPacket, 255);
     if (len > 0)
     {
       incomingPacket[len] = 0;
@@ -485,11 +490,17 @@ void receiveUdp() {
       return;
     }
     if (std::strcmp(incomingPacket,"timeSnow") == 0) {
+      timeSample->initializedSnow = false;
       mode = 6;
       return;
     }
     if (std::strcmp(incomingPacket,"timePlasma") == 0) {
       mode = 7;
+      return;
+    }
+    if (std::strcmp(incomingPacket,"timeColoredSnow") == 0) {
+      timeSample->initializedSnow = false;
+      mode = 8;
       return;
     }
     if (std::strcmp(incomingPacket,"scoreboard") == 0) {
@@ -557,12 +568,16 @@ void loop() {
       myDelay(1);
       break;
     case 6:
-      timeSample->timeSnow();
+      timeSample->timeSnow(false);
       myDelay(20);
       break;
     case 7:
       timeSample->timePlasma();
       myDelay(1);
+      break;
+    case 8:
+      timeSample->timeSnow(true);
+      myDelay(20);
       break;
     case 60:
       mandel->mandelbrot();
@@ -578,8 +593,6 @@ void loop() {
       break;
     }
   } else {
-    myDelay(30);
+    myDelay(1);
   }
-
-
 }
