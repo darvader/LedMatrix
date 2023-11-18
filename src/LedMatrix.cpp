@@ -95,7 +95,7 @@ uint16_t myMAGENTA = color565(255, 0, 255);
 uint16_t myBLACK = color565(0, 0, 0);
 uint16_t timeoutColor = color565(0, 50, 50);
 
-uint16_t myCOLORS[8]={myRED,myGREEN,myBLUE,myOrange,myYELLOW,myCYAN,myMAGENTA,myBLACK};
+uint16_t myCOLORS[9]={myBLACK,myRED,myGREEN,myBLUE,myOrange,myYELLOW,myCYAN,myMAGENTA,myWHITE};
 
 
 float zoomMandelbrot = 1.0;
@@ -149,7 +149,7 @@ unsigned int localUdpPort = 4210;
 char incomingPacket[255];
 //char incomingPacket[64*32*3];
 IPAddress masterIp;
-int mode = 8;
+int mode = 9;
 Scoreboard *scoreboard;
 
 TimeSample *timeSample = nullptr;
@@ -281,7 +281,7 @@ void setup() {
   // So far so good, so continue
   display->fillScreen(display->color444(0, 0, 0));
   display->drawDisplayTest(); // draw text numbering on each screen to check connectivity
-  dma_display->setBrightness8(120);    // range is 0-255, 0 - 0%, 255 - 100%
+  dma_display->setBrightness8(100);    // range is 0-255, 0 - 0%, 255 - 100%
   display->flipDMABuffer();
 
   Serial.println("Chain of 4x 64x32 panels for this example:");
@@ -503,6 +503,11 @@ void receiveUdp() {
       mode = 8;
       return;
     }
+    if (std::strcmp(incomingPacket,"timeGameOfLife") == 0) {
+      timeSample->initializedGOL = false;
+      mode = 9;
+      return;
+    }
     if (std::strcmp(incomingPacket,"scoreboard") == 0) {
       mode = 1;
       return;
@@ -578,6 +583,10 @@ void loop() {
     case 8:
       timeSample->timeSnow(true);
       myDelay(20);
+      break;
+    case 9:
+      timeSample->timeGameOfLife();
+      myDelay(10);
       break;
     case 60:
       mandel->mandelbrot();

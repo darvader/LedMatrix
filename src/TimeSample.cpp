@@ -368,3 +368,69 @@ void TimeSample::timeSnow(bool colored) {
   drawTime();
   showBuffer();
 }
+
+int TimeSample::countAliveNeighbors(int x, int y) {
+  int count = 0;
+  for (int i = -1; i <= 1; i++) {
+    for (int j = -1; j <= 1; j++) {
+      if (i == 0 && j == 0) continue; // Skip the current cell
+      // Wrap around the grid
+      int nx = (x + i + GRIDX) % GRIDX;
+      int ny = (y + j + GRIDY) % GRIDY;
+      count += grid[nx][ny] ? 1 : 0;
+    }
+  }
+  return count;
+}
+
+void TimeSample::timeGameOfLife() {
+  int changes = 0;
+
+  if (!initializedGOL) {
+    for (int y = 0; y < GRIDY; y++) {
+      for (int x = 0; x < GRIDX; x++) {
+        grid[x][y] = (random(2) == 0);
+      }
+    }
+    initializedGOL = true;
+  }
+
+  clear();
+  
+  for (int y = 0; y < GRIDY; y++) {
+    for (int x = 0; x < GRIDX; x++) {
+      int aliveNeighbors = countAliveNeighbors(x, y);
+      if (grid[x][y]) {
+        newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
+      } else {
+        newGrid[x][y] = (aliveNeighbors == 3);
+      }
+      if (grid[x][y] != newGrid[x][y]) {
+        changes++;
+      }
+    }
+  }
+
+  if (changes < (GRIDX * GRIDY) / 60) {
+    initializedGOL = false;
+  }
+
+// Swap grids
+  for (int y = 0; y < GRIDY; y++) {
+    for (int x = 0; x < GRIDX; x++) {
+      grid[x][y] = newGrid[x][y];
+    }
+  }
+
+  // Draw the grid
+  for (int y = 0; y < GRIDY; y++) {
+    for (int x = 0; x < GRIDX; x++) {
+      display->drawPixel(x, y, grid[x][y] ? myCOLORS[countAliveNeighbors(x, y)] : myBLACK);
+    }
+  }
+
+  drawTimeWithBackground();
+
+  showBuffer();
+
+}
