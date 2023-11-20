@@ -7,17 +7,24 @@
 #include <TimeLedMatrix.h>
 
 void Scoreboard::showScrollingText() {
-  static int textX = 0;
+  static float textX = 0;
+  static unsigned long lastTime = micros();
+  static float speed = 0.0407f/1000.0f;
   display->setTextColor(myGREEN);
 #ifdef ESP32
   display->setTextSize(2);
-  display->setCursor(matrix_width + 1 - textX++, matrix_height-16);
+  display->setCursor(matrix_width + 1 - textX, matrix_height-16);
   int size = display->print(scrollingText)*12 + matrix_width;
 #elif
   display->setTextSize(1);
-  display->setCursor(matrix_width + 1 - textX++, matrix_height-7);
+  display->setCursor(matrix_width + 1 - textX, matrix_height-7);
   int size = display->print(scrollingText)*6 + matrix_width;
 #endif
+  unsigned long elapsedTime = micros() - lastTime;
+  if (elapsedTime>0)
+    textX+=elapsedTime*speed;
+  lastTime = micros();
+  log_d("TextX %f", textX);
 
   if (textX > size) {
     textX = 0;
