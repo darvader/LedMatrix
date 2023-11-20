@@ -4,6 +4,7 @@
 #include <Mandel.h>
 #include <PxMatrix.h>
 #include <complex>
+#include <Globals.h>
 
 #ifdef ESP8266
 Mandel::Mandel(PxMATRIX *display)
@@ -20,84 +21,58 @@ Mandel::~Mandel()
 {
 }
 
-int Mandel::value(double real, double imag)
-{
-    int limit = 100;
-    double zReal = real;
-    double zImag = imag;
+void Mandel::mandelbrot() {
+	static float zoom = 1.0;
+  static float targetX = -0.65;  // Center on part of the Mandelbrot set
+  static float targetY = 0.0;
+  static unsigned long zoomStartTime = millis();
+  static float zoomDuration = 60000;  // 1 minute
+  static float targetZoom = 10.0;  // Target zoom level after 1 minute
 
-    for (int i = 0; i < limit; ++i)
-    {
-      double r2 = zReal * zReal;
-      double i2 = zImag * zImag;
+  float zoomProgress = (millis() - zoomStartTime) / zoomDuration;
+  if ((millis() - zoomStartTime)>zoomDuration) zoomStartTime = millis();
+  if (zoomProgress > 1.0) zoomProgress = 1.0;
+  zoom = 1.0 + (targetZoom - 1.0) * zoomProgress;
 
-      if (r2 + i2 > 4.0)
-        return i;
+  float xmin = targetX - 2.5 / zoom;
+  float xmax = targetX + 1.5 / zoom;
+  float ymin = targetY - 2.0 / zoom;
+  float ymax = targetY + 2.0 / zoom;
 
-      zImag = 2.0 * zReal * zImag + imag;
-      zReal = r2 - i2 + real;
-    }
-    return limit;
-}
+	float x, y, xx;
+  int hx, hy, hxmax = matrix_width, hymax = matrix_height;
+  int iteration, max_iteration = 1000;
+  uint16_t color;
 
-void Mandel::draw_deep(double x_start, double x_fin, double y_start, double y_fin) {
-  clear();
-  zoomMandelbrot *= 0.99;
+  float xr = (xmax - xmin) / ((hxmax - 1) * zoom);
+  float yr = (ymax - ymin) / ((hymax - 1) * zoom);
 
-  int width = 64; //number of characters fitting horizontally on my screen 
-	//~ int width = 300; //number of characters fitting horizontally on my screen 
-	int height = 32; //number of characters fitting vertically on my screen
-	//~ int height = 70; //number of characters fitting vertically on my screen
+  for (hx = 0; hx < hxmax; hx++) {
+    for (hy = 0; hy < hymax; hy++) {
+      float cr = xmin + (hx * xr);
+      float ci = ymin + (hy * yr);
 
-  double dx = (x_fin - x_start)/(width-1);
-	double dy = (y_fin - y_start)/(height-1);
-
-  for (int i = 0; i < height; i++) {
-		for (int j = 0; j < width; j++) {
-      yield();
-			
-			double x = x_start + j*dx; // current real value
-			double y = y_fin - i*dy; // current imaginary value
-
-      int c = value(x,y);
-
-      display->drawPixelRGB888(j, i, c, 0, 0);
+      x = 0.0;
+      y = 0.0;
+      iteration = 0;
+      
+      while ((x*x + y*y <= 4) && (iteration < max_iteration)) {
+        xx = x*x - y*y + cr;
+        y = 2.0*x*y + ci;
+        x = xx;
+        iteration++;
+      } 
+      
+      if (iteration >= max_iteration) {
+        // Inside the Mandelbrot set, color it black
+        color = myBLACK;
+      } else {
+        // Outside the Mandelbrot set, color it with a gradient based on the number of iterations
+        color = display->color565(iteration % 256, iteration % 128, iteration % 64); 
+      }
+      
+      display->drawPixel(hx, hy, color);
     }
   }
   showBuffer();
-}
-
-
-void Mandel::mandelbrot() {
-	
-	//~ double center_x = -0.7746806106269039;
-	//~ double center_y = -0.1374168856037867;
-	//~ double iter = 31;
-	//~ int color_threshold = 25;
-	
-	static double center_x = -1.04082816210546;
-	static double center_y = 0.346341718848392;
-	static int iter = 83;
-	
-	static double factor = 1.0;
-	
-	static double x_start = 0.0;
-	static double x_fin = 0.0;
-	static double y_start = 0.0;
-	static double y_fin = 0.0;
-	static int i = 0;
-
-  i++;
-  if (i > iter) {
-    i = 0;
-    factor = 1.0;
-  }
-
-  factor = factor / 1.3;
-  x_start = center_x - 1.5*factor;
-  x_fin = center_x + 1.5*factor;
-  y_start = center_y - factor;
-  y_fin = center_y + factor;
-	draw_deep(x_start, x_fin, y_start, y_fin);
-	
 } 

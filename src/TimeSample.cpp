@@ -384,7 +384,8 @@ int TimeSample::countAliveNeighbors(int x, int y) {
 }
 
 void TimeSample::timeGameOfLife() {
-  int changes = 0;
+  static int golType = -1;
+  static int startTime = millis();
 
   if (!initializedGOL) {
     for (int y = 0; y < GRIDY; y++) {
@@ -392,18 +393,71 @@ void TimeSample::timeGameOfLife() {
         grid[x][y] = (random(2) == 0);
       }
     }
+    golType++;
+    if (golType>3) golType = 0;
+    startTime = millis();
     initializedGOL = true;
   }
 
   clear();
   
+  int changes = 0;
   for (int y = 0; y < GRIDY; y++) {
     for (int x = 0; x < GRIDX; x++) {
       int aliveNeighbors = countAliveNeighbors(x, y);
-      if (grid[x][y]) {
-        newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
-      } else {
-        newGrid[x][y] = (aliveNeighbors == 3);
+      if (grid[x][y]) { // survive part
+        switch (golType)
+        {
+        case 0: // original
+          newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
+          break;
+        case 1: // high life
+          newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
+          break;
+        case 2: // 2x2
+          newGrid[x][y] = (aliveNeighbors >= 1 || aliveNeighbors <= 6);
+          break;
+        case 3: // 34 Life
+          newGrid[x][y] = (aliveNeighbors == 3);
+          break;
+        // case 4: // Long life
+        //   newGrid[x][y] = (aliveNeighbors == 5);
+        //   break;
+        // case 2: // day & night
+        //   newGrid[x][y] = (aliveNeighbors >= 3 && aliveNeighbors <= 6);
+        //   break;
+        
+        default:
+          newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
+          break;
+        }
+      } else { // born part
+        switch (golType)
+        {
+        case 0: // original
+          newGrid[x][y] = (aliveNeighbors == 3);
+          break;
+        case 1: // high life
+          newGrid[x][y] = (aliveNeighbors == 3 || aliveNeighbors == 6);
+          break;
+        case 2: // 2x2
+          newGrid[x][y] = (aliveNeighbors == 3);
+          break;
+        case 3: // 34 Life
+          newGrid[x][y] = (aliveNeighbors == 3 || aliveNeighbors == 4);
+          break;
+        // case 4: // Long Life
+        //   newGrid[x][y] = (aliveNeighbors == 3);
+        //   break;
+        // case 2: // day & night
+        //   newGrid[x][y] = (aliveNeighbors >= 3 && aliveNeighbors <= 8);
+        //   break;
+        
+        default:
+          newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
+          break;
+        }
+        
       }
       if (grid[x][y] != newGrid[x][y]) {
         changes++;
@@ -411,7 +465,9 @@ void TimeSample::timeGameOfLife() {
     }
   }
 
-  if (changes < (GRIDX * GRIDY) / 60) {
+  // re-initialize if nothing much changes or at least after 2 mins
+  if ((changes < (GRIDX * GRIDY) / 100) || 
+    (millis() - startTime > 120000)) {
     initializedGOL = false;
   }
 
