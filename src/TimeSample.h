@@ -2,15 +2,19 @@
 #include <BaseLedMatrix.h>
 
 #define GRIDX 128
+#define GRIDX_BYTE 16
 #define GRIDY 64
 
 class TimeSample: public BaseLedMatrix
 {
 private:
     /* data */
-    bool grid[GRIDX][GRIDY];
-    bool newGrid[GRIDX][GRIDY];
-    int countAliveNeighbors(int x, int y);
+    uint8_t  oldGrid[GRIDX_BYTE][GRIDY];
+    uint8_t  grid[GRIDX_BYTE][GRIDY];
+    uint8_t  newGrid[GRIDX_BYTE][GRIDY];
+    int countAliveNeighbors(uint8_t  x, uint8_t  y);
+    bool get(byte grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y);
+    void set(byte grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y, bool value);
 public:
     NTPClient *timeClient;
     boolean initializedSnow = false;

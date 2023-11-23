@@ -369,18 +369,35 @@ void TimeSample::timeSnow(bool colored) {
   showBuffer();
 }
 
-int TimeSample::countAliveNeighbors(int x, int y) {
-  int count = 0;
-  for (int i = -1; i <= 1; i++) {
-    for (int j = -1; j <= 1; j++) {
+int TimeSample::countAliveNeighbors(uint8_t  x, uint8_t  y) {
+  uint8_t  count = 0;
+  for (int8_t   i = -1; i <= 1; i++) {
+    for (int8_t   j = -1; j <= 1; j++) {
       if (i == 0 && j == 0) continue; // Skip the current cell
       // Wrap around the grid
-      int nx = (x + i + GRIDX) % GRIDX;
-      int ny = (y + j + GRIDY) % GRIDY;
-      count += grid[nx][ny] ? 1 : 0;
+      uint8_t  nx = (x + i + GRIDX) % GRIDX;
+      uint8_t  ny = (y + j + GRIDY) % GRIDY;
+      count += get(grid, nx, ny) ? 1 : 0;
     }
   }
   return count;
+}
+
+void TimeSample::set(uint8_t grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y, bool value) {
+    uint8_t  byteIndex = x / 8;  // Find the byte in the array
+    uint8_t  bitIndex = x % 8;   // Find the bit in the byte
+
+    if (value) {
+        grid[byteIndex][y] |= (1 << bitIndex);  // Set the bit using OR
+    } else {
+        grid[byteIndex][y] &= ~(1 << bitIndex);  // Clear the bit using AND and NOT
+    }
+}
+
+bool TimeSample::get(byte grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y) {
+  uint8_t  xByte = x / 8;
+  uint8_t  xBit = x % 8;
+  return (grid[xByte][y] & (1 << xBit)) != 0;
 }
 
 void TimeSample::timeGameOfLife() {
@@ -390,11 +407,11 @@ void TimeSample::timeGameOfLife() {
   if (!initializedGOL) {
     for (int y = 0; y < GRIDY; y++) {
       for (int x = 0; x < GRIDX; x++) {
-        grid[x][y] = (random(2) == 0);
+        set(grid, x, y, (random(2) == 0));
       }
     }
     golType++;
-    if (golType>3) golType = 0;
+    if (golType>2) golType = 0;
     startTime = millis();
     initializedGOL = true;
   }
@@ -405,75 +422,77 @@ void TimeSample::timeGameOfLife() {
   for (int y = 0; y < GRIDY; y++) {
     for (int x = 0; x < GRIDX; x++) {
       int aliveNeighbors = countAliveNeighbors(x, y);
-      if (grid[x][y]) { // survive part
+      if (get(grid, x, y)) { // survive part
         switch (golType)
         {
         case 0: // original
-          newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
+          set(newGrid, x, y, aliveNeighbors == 2 || aliveNeighbors == 3);
           break;
         case 1: // high life
-          newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
+          set(newGrid, x, y, aliveNeighbors == 2 || aliveNeighbors == 3);
           break;
         case 2: // 2x2
-          newGrid[x][y] = (aliveNeighbors >= 1 || aliveNeighbors <= 6);
+          set(newGrid, x, y, aliveNeighbors >= 1 || aliveNeighbors <= 6);
           break;
         case 3: // 34 Life
-          newGrid[x][y] = (aliveNeighbors == 3);
+          set(newGrid, x, y, aliveNeighbors == 3);
           break;
-        // case 4: // Long life
-        //   newGrid[x][y] = (aliveNeighbors == 5);
-        //   break;
-        // case 2: // day & night
-        //   newGrid[x][y] = (aliveNeighbors >= 3 && aliveNeighbors <= 6);
-        //   break;
+        case 4: // Long life
+          set(newGrid, x, y, aliveNeighbors == 5);
+          break;
+        case 5: // day & night
+          set(newGrid, x, y, aliveNeighbors >= 3 && aliveNeighbors <= 6);
+          break;
         
         default:
-          newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
+          set(newGrid, x, y, aliveNeighbors == 2 || aliveNeighbors == 3);
           break;
         }
       } else { // born part
         switch (golType)
         {
         case 0: // original
-          newGrid[x][y] = (aliveNeighbors == 3);
+          set(newGrid, x, y, aliveNeighbors == 3);
           break;
         case 1: // high life
-          newGrid[x][y] = (aliveNeighbors == 3 || aliveNeighbors == 6);
+          set(newGrid, x, y, aliveNeighbors == 3 || aliveNeighbors == 6);
           break;
         case 2: // 2x2
-          newGrid[x][y] = (aliveNeighbors == 3);
+          set(newGrid, x, y, aliveNeighbors == 3);
           break;
         case 3: // 34 Life
-          newGrid[x][y] = (aliveNeighbors == 3 || aliveNeighbors == 4);
+          set(newGrid, x, y, aliveNeighbors == 3 || aliveNeighbors == 4);
           break;
-        // case 4: // Long Life
-        //   newGrid[x][y] = (aliveNeighbors == 3);
-        //   break;
-        // case 2: // day & night
-        //   newGrid[x][y] = (aliveNeighbors >= 3 && aliveNeighbors <= 8);
-        //   break;
+        case 4: // Long Life
+          set(newGrid, x, y, aliveNeighbors == 3);
+          break;
+        case 5: // day & night
+          set(newGrid, x, y, aliveNeighbors >= 3 && aliveNeighbors <= 8);
+          break;
         
         default:
-          newGrid[x][y] = (aliveNeighbors == 2 || aliveNeighbors == 3);
+          set(newGrid, x, y, aliveNeighbors == 2 || aliveNeighbors == 3);
           break;
         }
         
       }
-      if (grid[x][y] != newGrid[x][y]) {
+      if (get(oldGrid, x, y) != get(newGrid, x, y)) {
+      // if (grid[x][y] != newGrid[x][y]) {
         changes++;
       }
     }
   }
 
   // re-initialize if nothing much changes or at least after 2 mins
-  if ((changes < (GRIDX * GRIDY) / 100) || 
-    (millis() - startTime > 120000)) {
+  if ((changes < (GRIDX * GRIDY) / 4000) || 
+    (millis() - startTime > 240000)) {
     initializedGOL = false;
   }
 
 // Swap grids
   for (int y = 0; y < GRIDY; y++) {
-    for (int x = 0; x < GRIDX; x++) {
+    for (int x = 0; x < GRIDX_BYTE; x++) {
+      oldGrid[x][y] = grid[x][y];
       grid[x][y] = newGrid[x][y];
     }
   }
@@ -481,7 +500,7 @@ void TimeSample::timeGameOfLife() {
   // Draw the grid
   for (int y = 0; y < GRIDY; y++) {
     for (int x = 0; x < GRIDX; x++) {
-      display->drawPixel(x, y, grid[x][y] ? myCOLORS[countAliveNeighbors(x, y)] : myBLACK);
+      display->drawPixel(x, y, get(grid,x,y) ? myCOLORS[countAliveNeighbors(x, y)] : myBLACK);
     }
   }
 

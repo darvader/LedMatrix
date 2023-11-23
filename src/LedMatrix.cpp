@@ -266,6 +266,7 @@ void setup() {
     HUB75_I2S_CFG::FM6126A      // driver chip
   );
   mxconfig.double_buff = true;
+  // mxconfig.setPixelColorDepthBits(6);
   // mxconfig.i2sspeed = HUB75_I2S_CFG::HZ_20M;
   // OK, now we can create our matrix object
   dma_display = new MatrixPanel_I2S_DMA(mxconfig);
@@ -555,7 +556,7 @@ void loop() {
     {
     case 1:
       scoreboard->show();
-      myDelay(1);
+      myDelay(2);
       break;
     case 2:
       timeSample->timeSample1();
@@ -587,7 +588,7 @@ void loop() {
       break;
     case 9:
       timeSample->timeGameOfLife();
-      myDelay(10);
+      myDelay(1);
       break;
     case 60:
       mandel->mandelbrot();
