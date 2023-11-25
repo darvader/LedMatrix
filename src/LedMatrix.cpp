@@ -1,6 +1,10 @@
-#define double_buffer
+// Creates a second buffer for background drawing (doubles the required RAM)
+// #define PxMATRIX_double_buffer true
+// #define double_buffer
+#include <PxMatrix.h>
 
 #include <Arduino.h>
+#include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <cstring>
@@ -9,11 +13,11 @@
 // #include <FFTLed.h>
 #include <scoreboard.h>
 #include <Globals.h>
-#include <PxMatrix.h>
 #include <TimeSample.h>
 #include <Mandel.h>
 #include <Timer.h>
 #include <fauxmoESP.h>
+
 
 // Pins for LED MATRIX
 #ifdef ESP32
@@ -56,7 +60,6 @@
 uint8_t display_draw_time=10; //30-70 is usually fine
 #ifdef ESP8266
 
-#include <ESP8266WiFi.h>
 #include <Ticker.h>
 Ticker display_ticker;
 #define P_LAT 16
@@ -136,7 +139,7 @@ void display_update_enable(bool is_enable)
 const int ESP_BUILTIN_LED = 2;
 // Rather than declaring the whole NeoPixel object here, we just create
 // a pointer for one, which we'll then allocate later...
-char scrollingText[100] = "VSV Jena 90 e.V. : Gastmannschaft";
+char scrollingText[512] = "VSV Jena 90 e.V. : Gastmannschaft";
 
 
 WiFiUDP Udp;
@@ -323,7 +326,7 @@ void setup() {
   display->setTextWrap(false);
 
   setupWifiUpdate();
-  // setupFauxmo();
+  setupFauxmo();
   setupUdp();
   timeClient->begin();
   scoreboard = new Scoreboard(timeClient, display);
@@ -350,7 +353,7 @@ void detect() {
   showBuffer();
   clear();
   for(int i = 0; i < matrix_width; i+=2) {
-    display->drawFastVLine(i,0,matrix_height,myRED);
+    display->drawFastVLine(i,0,matrix_height-1,myRED);
     display->setCursor(10,10);
     display->setTextColor(myGREEN);
     display->setTextSize(1);
@@ -548,7 +551,7 @@ void receiveUdp() {
 void myDelay(ulong millisecs) {
   long time = millis();
   while (millis() - time < millisecs) {
-    // fauxmo.handle();
+    fauxmo.handle();
     ArduinoOTA.handle();
     receiveUdp();
     yield();
