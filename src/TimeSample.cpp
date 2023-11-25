@@ -304,10 +304,6 @@ void TimeSample::timeSample4() {
     showBuffer();
   }
 
-uint16_t static mediumSnow[] = {0x0000, 0xffff, 0x0000,
-                                0xffff, 0xffff, 0xffff,
-                                0x0000, 0xffff, 0x0000};
-
 
 void TimeSample::timeSnow(bool colored) {
   Serial.println("Begin Snow");
@@ -317,8 +313,6 @@ void TimeSample::timeSnow(bool colored) {
   static const int size = 4;
   #endif
   static const int numSmallSnows = 60*size; 
-  static const int numMediumSnows = 10;
-  static const int numLargeSnows = 10; 
   static const int width = display->width()-1; 
   static const int height = display->height()-1; 
 
@@ -362,7 +356,7 @@ void TimeSample::timeSnow(bool colored) {
       sn->y = 0;
       sn->speed = random(3,10)/10.0f;
     }
-  }  
+  }
 
   Serial.println("Draw time");
   drawTime();

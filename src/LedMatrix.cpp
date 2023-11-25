@@ -1,4 +1,4 @@
-// #define double_buffer
+#define double_buffer
 
 #include <Arduino.h>
 #include <WiFiUdp.h>
