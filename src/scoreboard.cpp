@@ -15,7 +15,7 @@ void Scoreboard::showScrollingText() {
   display->setTextSize(2);
   display->setCursor(matrix_width + 1 - textX, matrix_height-16);
   int size = display->print(scrollingText)*12 + matrix_width;
-#elif
+#else
   display->setTextSize(1);
   display->setCursor(matrix_width + 1 - textX, matrix_height-7);
   int size = display->print(scrollingText)*6 + matrix_width;
@@ -24,7 +24,6 @@ void Scoreboard::showScrollingText() {
   if (elapsedTime>0)
     textX+=elapsedTime*speed;
   lastTime = micros();
-  log_d("TextX %f", textX);
 
   if (textX > size) {
     textX = 0;
@@ -35,7 +34,7 @@ void Scoreboard::showScore() {
 #ifdef ESP32
   display->setTextSize(4);
   display->setCursor(3,1);
-#elif
+#else
   display->setTextSize(2);
   display->setCursor(3,0);
 #endif
@@ -50,7 +49,7 @@ void Scoreboard::showScore() {
   display->print(setsLeft);
   display->setCursor(116, 31);
   display->print(setsRight);
-#elif
+#else
   display->setCursor(0, 15);
   display->setTextSize(1);
   display->print(setsLeft);
@@ -64,7 +63,7 @@ void Scoreboard::showScore() {
   } else {
     display->fillCircle(110, 38, 4, myYELLOW);
   }
-#elif
+#else
   if (teamLeftServes) {
     display->fillCircle(11, 18, 3, myYELLOW); 
   } else {
@@ -83,7 +82,7 @@ void Scoreboard::showTime() {
   display->setTextColor(myMAGENTA);
 #ifdef ESP32
   display->setCursor(40, 33);
-#elif
+#else
   display->setCursor(18, 20);
   display->setFont(&Picopixel);
 #endif
@@ -104,7 +103,7 @@ void Scoreboard::timeOut() {
   display->setTextColor(myOrange);
 #ifdef ESP32
   display->setCursor(40, matrix_height - 7);
-#elif
+#else
   display->setCursor(4, matrix_height - 7);
 #endif
 

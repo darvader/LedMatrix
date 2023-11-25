@@ -1,5 +1,4 @@
-#define PxMATRIX_double_buffer true
-#define double_buffer
+// #define double_buffer
 
 #include <Arduino.h>
 #include <WiFiUdp.h>
@@ -7,14 +6,14 @@
 #include <cstring>
 #include <WifiUpdate.h>
 #include <NTPClient.h>
-#include <FFTLed.h>
+// #include <FFTLed.h>
 #include <scoreboard.h>
 #include <Globals.h>
 #include <PxMatrix.h>
 #include <TimeSample.h>
 #include <Mandel.h>
 #include <Timer.h>
-// #include <SPIFFS.h>
+#include <fauxmoESP.h>
 
 // Pins for LED MATRIX
 #ifdef ESP32
@@ -137,32 +136,31 @@ void display_update_enable(bool is_enable)
 const int ESP_BUILTIN_LED = 2;
 // Rather than declaring the whole NeoPixel object here, we just create
 // a pointer for one, which we'll then allocate later...
-char scrollingText[512] = "VSV Jena 90 e.V. : Gastmannschaft";
+char scrollingText[100] = "VSV Jena 90 e.V. : Gastmannschaft";
 
 
 WiFiUDP Udp;
 WiFiUDP UdpNtp;
 
 const long utcOffsetInSeconds = 60*60*0;
-NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds, 300*1000);
+NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds);
 unsigned int localUdpPort = 4210;
 char incomingPacket[255];
 //char incomingPacket[64*32*3];
 IPAddress masterIp;
-int mode = 9;
+int mode = 2;
 Scoreboard *scoreboard;
-
-TimeSample *timeSample = nullptr;
-Mandel *mandel = nullptr;
-Timer *timer = nullptr;
-// fauxmoESP fauxmo;
+TimeSample timeSample(display, timeClient);
+Mandel mandel(display);
+Timer timer(display);
+fauxmoESP fauxmo;
 
 void setupUdp();
 void receiveUdp();
 void displayOff();
 void myDelay(ulong millisecs);
 
-/*void setupFauxmo() {
+void setupFauxmo() {
   fauxmo.addDevice("Uhr 1");
   fauxmo.addDevice("Uhr 2");
   fauxmo.addDevice("Uhr 3");
@@ -206,7 +204,7 @@ void myDelay(ulong millisecs);
       }
 
   });
-}*/
+}
 
 inline void showBuffer() {
   #ifdef ESP8266
@@ -226,18 +224,19 @@ inline void clear() {
 }
 
 void logMemory() {
+#ifdef ESP32
   log_d("Total heap: %d", ESP.getHeapSize());
   log_d("Free heap: %d", ESP.getFreeHeap());
   log_d("Min Free heap: %d", ESP.getMinFreeHeap());
   log_d("Total PSRAM: %d", ESP.getPsramSize());
   log_d("Free SketchSpace: %d", ESP.getFreeSketchSpace());
+#else
+  Serial.printf("Free heap: %d", ESP.getFreeHeap());
+  Serial.printf("Free SketchSpace: %d", ESP.getFreeSketchSpace());
+#endif
 }
 
-void setup() {
-  Serial.begin(115200);
-  Serial.println("Booting");
-
-// Define your display layout here, e.g. 1/8 step, and optional SPI pins begin(row_pattern, CLK, MOSI, MISO, SS)
+void setupDisplay() {
   #ifdef ESP8266
   display->begin(16);
   display->setFastUpdate(true);
@@ -255,6 +254,7 @@ void setup() {
   showBuffer();
   #endif
   #ifdef ESP32
+// Define your display layout here, e.g. 1/8 step, and optional SPI pins begin(row_pattern, CLK, MOSI, MISO, SS)
   //Another way of creating config structure
   //Custom pin mapping for all pins
   HUB75_I2S_CFG::i2s_pins _pins={R1, G1, B1, R2, G2, B2, A, B, C, D, E, LAT, OE, CLK};
@@ -311,6 +311,14 @@ void setup() {
    display->flipDMABuffer();
    //display->drawDisplayTest(); // re draw text numbering on each screen to check connectivity
   #endif
+
+}
+
+void setup() {
+  Serial.begin(115200);
+  Serial.println("Booting");
+
+  setupDisplay();
   Serial.println("finished");
   display->setTextWrap(false);
 
@@ -320,9 +328,6 @@ void setup() {
   timeClient->begin();
   scoreboard = new Scoreboard(timeClient, display);
 
-  timeSample = new TimeSample(display, timeClient);
-  mandel = new Mandel(display);
-  timer = new Timer(display);
   logMemory();
 
 }
@@ -445,29 +450,29 @@ void receiveUdp() {
       mode = 30;
       uint16_t timeToSet = incomingPacket[6] << 8 | incomingPacket[7];
       Serial.printf("Timer: %d", timeToSet);
-      timer->setTimer(timeToSet);
+      timer.setTimer(timeToSet);
 
       return;
     }
     if (std::strcmp(incomingPacket,"timerStart") == 0) {
-      timer->start();
+      timer.start();
       return;
     }
     if (std::strcmp(incomingPacket,"stopWatch") == 0) {
       mode = 30;
-      timer->stopWatch();
+      timer.stopWatch();
       return;
     }
     if (std::strcmp(incomingPacket,"stopWatchStart") == 0) {
-      timer->stopWatchStart();
+      timer.stopWatchStart();
       return;
     }
     if (std::strcmp(incomingPacket,"stopWatchStop") == 0) {
-      timer->stopWatchStop();
+      timer.stopWatchStop();
       return;
     }
     if (std::strcmp(incomingPacket,"timerPause") == 0) {
-      timer->pause();
+      timer.pause();
       return;
     }
     if (std::strcmp(incomingPacket,"timeout") == 0) {
@@ -492,7 +497,7 @@ void receiveUdp() {
       return;
     }
     if (std::strcmp(incomingPacket,"timeSnow") == 0) {
-      timeSample->initializedSnow = false;
+      timeSample.initializedSnow = false;
       mode = 6;
       return;
     }
@@ -501,12 +506,12 @@ void receiveUdp() {
       return;
     }
     if (std::strcmp(incomingPacket,"timeColoredSnow") == 0) {
-      timeSample->initializedSnow = false;
+      timeSample.initializedSnow = false;
       mode = 8;
       return;
     }
     if (std::strcmp(incomingPacket,"timeGameOfLife") == 0) {
-      timeSample->initializedGOL = false;
+      timeSample.initializedGOL = false;
       mode = 9;
       return;
     }
@@ -528,7 +533,7 @@ void receiveUdp() {
       for (int i = 0; i <= 128; i++) {
         vReal[i] = (double)incomingPacket[i];
       }
-      ledFFT(display); 
+      // ledFFT(display); 
 
       return;
     } 
@@ -559,43 +564,45 @@ void loop() {
       myDelay(2);
       break;
     case 2:
-      timeSample->timeSample1();
+      timeSample.timeSample1();
       myDelay(30);
       break;
     case 3:
-      timeSample->timeSample2();
+      timeSample.timeSample2();
       myDelay(1);
       break;
     case 4:
-      timeSample->timeSample3();
+      timeSample.timeSample3();
       myDelay(1);
       break;
     case 5:
-      timeSample->timeSample4();
+      timeSample.timeSample4();
       myDelay(1);
       break;
     case 6:
-      timeSample->timeSnow(false);
+      timeSample.timeSnow(false);
       myDelay(20);
       break;
     case 7:
-      timeSample->timePlasma();
+      timeSample.timePlasma();
       myDelay(1);
       break;
     case 8:
-      timeSample->timeSnow(true);
+      timeSample.timeSnow(true);
       myDelay(20);
       break;
+#ifdef ESP32      
     case 9:
       timeSample->timeGameOfLife();
       myDelay(1);
       break;
+#endif
     case 60:
-      mandel->mandelbrot();
+      mandel.mandelbrot();
       myDelay(1);
       break;
     case 30:
-      timer->show();
+      timer.show();
       myDelay(1);
       break;
     default:

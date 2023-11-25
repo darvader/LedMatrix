@@ -2,12 +2,12 @@
 #define double_buffer
 
 #include <Arduino.h>
-#include <arduinoFFT.h>
+//#include <arduinoFFT.h>
 #include <Globals.h>
 #include <FFTLed.h>
 #include <PxMatrix.h>
 
-#define SAMPLES 256              //Must be a power of 2
+#define SAMPLES 1              //Must be a power of 2
 #define SAMPLING_FREQUENCY 20000 //Hz, must be 10000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT.
 #define amplitude 2
 unsigned int sampling_period_us;
@@ -18,14 +18,23 @@ unsigned long newTime, oldTime;
 float scale = 1.0f;
 
 
-arduinoFFT FFT = arduinoFFT();
+// arduinoFFT FFT = arduinoFFT();
 
+#ifdef ESP32
 void ledFFT(VirtualMatrixPanel *display) {
+#else
+void ledFFT(PxMATRIX *display) {
+#endif
   int j = 0;
   Serial.printf("Start LED");
   int fadeDown = 10;
   int threshold = 10;
+#ifdef ESP32
   display->clearScreen();
+#else
+  display->clearDisplay();
+#endif
+
   for (int i = 2; i < 128; i++){ // Don't use sample 0 and only first SAMPLES/2 are usable. Each array eleement represents a frequency and its value the amplitude.
     int real = (int) vReal[i];
     if (real<threshold) {

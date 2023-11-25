@@ -36,7 +36,6 @@ struct snow_t {
   Snow type;
   float x, y;
   float speed;
-  float color;
   uint8_t r, g, b;
 };
 
@@ -49,8 +48,8 @@ void TimeSample::drawTimeWithBackground() {
   static int width = display->width();
   static int height = display->height();
 #ifdef ESP32
-  display->fillRect(39, height/2-5, 49, 9, myBLACK);
-#elif
+  display->fillRect(9, 10, 49, 9, myBLACK);
+#else
   display->fillRect(9, height/2-6, 49*x, 9*x, myBLACK);
 #endif
   drawTime();
@@ -64,9 +63,9 @@ void inline TimeSample::drawTime() {
 #ifdef ESP32
   display->setTextSize(1);
   display->setCursor(40, (display->height()/2)-4);
-#elif
+#else
   display->setTextSize(1);
-  display->setCursor(10, (display->height()/2)-7);
+  display->setCursor(10,11);
 #endif
   display->setTextColor(myMAGENTA);
   display->printf("%02d:%02d:%02d", hour(local), minute(local), second(local));
@@ -117,7 +116,7 @@ void TimeSample::timeSample2() {
       lines[i].x2 = sin(i * PI/size + PI) * radius + width;
       lines[i].y2 = cos(i * PI/size + PI) * radius + height;
 
-      lines[i].color = myCOLORS[i % 7];
+      lines[i].color = myCOLORS[i % 7 + 1];
       lines[i].arc = i * PI/size;
     }
     initialized = true;
@@ -311,21 +310,19 @@ uint16_t static mediumSnow[] = {0x0000, 0xffff, 0x0000,
 
 
 void TimeSample::timeSnow(bool colored) {
+  Serial.println("Begin Snow");
   #ifdef ESP8266
   static const int size = 1;
   #else
   static const int size = 4;
   #endif
   static const int numSmallSnows = 60*size; 
-  static const int numMediumSnows = 10; 
+  static const int numMediumSnows = 10;
   static const int numLargeSnows = 10; 
   static const int width = display->width()-1; 
   static const int height = display->height()-1; 
 
   static snow_t smallSnows[numSmallSnows];
-  static snow_t mediumSnows[numMediumSnows];
-  static snow_t largeSnows[numLargeSnows];
-  static snow_t snow;
 
   if (!initializedSnow) {
     for (int i = 0; i < numSmallSnows; i++) {
@@ -345,7 +342,9 @@ void TimeSample::timeSnow(bool colored) {
   }
 
   timeClient->update();
+  Serial.println("Time client updated");
   clear();
+  Serial.println("cleared");
 
   for (int i = 0; i < numSmallSnows; i++) {
       snow_t* sn = &smallSnows[i];
@@ -365,10 +364,14 @@ void TimeSample::timeSnow(bool colored) {
     }
   }  
 
+  Serial.println("Draw time");
   drawTime();
+  Serial.println("Draw time ended");
   showBuffer();
+  Serial.println("End Snow");
 }
 
+#ifdef ESP32
 int TimeSample::countAliveNeighbors(uint8_t  x, uint8_t  y) {
   uint8_t  count = 0;
   for (int8_t   i = -1; i <= 1; i++) {
@@ -476,8 +479,11 @@ void TimeSample::timeGameOfLife() {
         }
         
       }
+    #ifdef ESP32
       if (get(oldGrid, x, y) != get(newGrid, x, y)) {
-      // if (grid[x][y] != newGrid[x][y]) {
+    #else
+      if (grid[x][y] != newGrid[x][y]) {
+    #endif
         changes++;
       }
     }
@@ -492,7 +498,9 @@ void TimeSample::timeGameOfLife() {
 // Swap grids
   for (int y = 0; y < GRIDY; y++) {
     for (int x = 0; x < GRIDX_BYTE; x++) {
+    #ifdef ESP32
       oldGrid[x][y] = grid[x][y];
+    #endif
       grid[x][y] = newGrid[x][y];
     }
   }
@@ -507,5 +515,5 @@ void TimeSample::timeGameOfLife() {
   drawTimeWithBackground();
 
   showBuffer();
-
 }
+#endif
