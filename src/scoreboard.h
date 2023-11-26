@@ -1,3 +1,7 @@
+#ifndef _SCOREBOARD
+#define _SCOREBOARD
+
+
 #include <NTPClient.h>
 #include <Globals.h>
 #include <BaseLedMatrix.h>
@@ -34,3 +38,4 @@ public:
     void updateScore();
     void updateScrollingText();
 };
+#endif

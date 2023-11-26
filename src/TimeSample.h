@@ -1,3 +1,7 @@
+
+#ifndef _TIME_SAMPLE
+#define _TIME_SAMPE
+
 #include <NTPClient.h>
 #include <BaseLedMatrix.h>
 
@@ -16,6 +20,9 @@ class TimeSample: public BaseLedMatrix
 {
 private:
     /* data */
+  int xVals[360];
+  int yVals[360];
+
 #ifdef ESP32
     uint8_t  oldGrid[GRIDX_BYTE][GRIDY];
     uint8_t  grid[GRIDX_BYTE][GRIDY];
@@ -47,4 +54,4 @@ public:
     void timePlasma();
     void timeSnow(bool colored);
 };
-
+#endif

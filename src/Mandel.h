@@ -1,7 +1,8 @@
 
+#ifndef _MANDEL
+#define _MANDEL
+
 #include <BaseLedMatrix.h>
-#define PxMATRIX_double_buffer true
-#define double_buffer
 
 class Mandel: public BaseLedMatrix
 {
@@ -18,3 +19,4 @@ public:
     ~Mandel();
     void mandelbrot();
 };
+#endif

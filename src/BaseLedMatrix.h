@@ -1,7 +1,7 @@
 
-#include <PxMatrix.h>
 #ifndef _BASE_LED_MATRIX
 #define _BASE_LED_MATRIX
+#include <PxMatrix.h>
 class BaseLedMatrix {
     protected:
 #ifdef ESP8266

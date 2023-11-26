@@ -1,6 +1,3 @@
-#define PxMATRIX_double_buffer true
-#define double_buffer
-
 #include <Arduino.h>
 //#include <arduinoFFT.h>
 #include <Globals.h>

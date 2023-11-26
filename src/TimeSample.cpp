@@ -148,8 +148,6 @@ void TimeSample::timeSample3() {
   static boolean initialized = false;
   static byte radius = matrix_width/2+5;
   static const int step = 360/size; 
-  static int xVals[360];
-  static int yVals[360];
 
   if (!initialized) {
     for (int i = 0; i < 360; i++) {
@@ -199,8 +197,6 @@ void TimeSample::timeSample4() {
   static line_t lines[size];
   static boolean initialized = false;
   static const int step = 360/size; 
-  static int xVals[360];
-  static int yVals[360];
   static int width = display->width();
   static int height = display->height();
   static byte radius = height + 10;
@@ -337,6 +333,7 @@ void TimeSample::timeSnow(bool colored) {
 
   timeClient->update();
   Serial.println("Time client updated");
+  Serial.printf("Free heap: %d", ESP.getFreeHeap());
   clear();
   Serial.println("cleared");
 

@@ -1,3 +1,6 @@
+#ifndef _FFT_LED
+#define _FFT_LED
+
 #ifdef ESP32
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 void ledFFT(VirtualMatrixPanel *display);
@@ -9,3 +12,4 @@ void fft();
 void fftRow();
 void ledFFTRow();
 void calcFFT();
+#endif

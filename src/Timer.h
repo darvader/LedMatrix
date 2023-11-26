@@ -1,3 +1,6 @@
+#ifndef _TIMER
+#define _TIMER
+
 #include <BaseLedMatrix.h>
 class Timer: public BaseLedMatrix
 {
@@ -28,4 +31,4 @@ public:
     void showTimer();
     void showStopWatch();
 };
-
+#endif

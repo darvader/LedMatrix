@@ -1,10 +1,9 @@
 // Creates a second buffer for background drawing (doubles the required RAM)
-// #define PxMATRIX_double_buffer true
-// #define double_buffer
+#define PxMATRIX_double_buffer true
+#define double_buffer
 #include <PxMatrix.h>
 
 #include <Arduino.h>
-#include <ESP8266WiFi.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <cstring>
@@ -60,6 +59,7 @@
 uint8_t display_draw_time=10; //30-70 is usually fine
 #ifdef ESP8266
 
+#include <ESP8266WiFi.h>
 #include <Ticker.h>
 Ticker display_ticker;
 #define P_LAT 16
@@ -76,7 +76,7 @@ Ticker display_ticker;
 // PxMATRIX display(32,16,P_LAT, P_OE,P_A,P_B,P_C);
 PxMATRIX *display = new PxMATRIX(64,32,P_LAT, P_OE,P_A,P_B,P_C,P_D);
 //PxMATRIX display(64,64,P_LAT, P_OE,P_A,P_B,P_C,P_D,P_E);
-char replyPacket[] = "LedMatrix";
+const char replyPacket[] = "LedMatrix";
 
 #endif
 using namespace std;
@@ -86,18 +86,18 @@ inline uint16_t color565(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 // Some standard colors
-uint16_t myRED = color565(255, 0, 0);
-uint16_t myGREEN = color565(0, 255, 0);
-uint16_t myBLUE = color565(0, 0, 255);
-uint16_t myWHITE = color565(255, 255, 255);
-uint16_t myYELLOW = color565(255, 255, 0);
-uint16_t myOrange = color565(255, 127, 0);
-uint16_t myCYAN = color565(0, 255, 255);
-uint16_t myMAGENTA = color565(255, 0, 255);
-uint16_t myBLACK = color565(0, 0, 0);
-uint16_t timeoutColor = color565(0, 50, 50);
+const uint16_t myRED = color565(255, 0, 0);
+const uint16_t myGREEN = color565(0, 255, 0);
+const uint16_t myBLUE = color565(0, 0, 255);
+const uint16_t myWHITE = color565(255, 255, 255);
+const uint16_t myYELLOW = color565(255, 255, 0);
+const uint16_t myOrange = color565(255, 127, 0);
+const uint16_t myCYAN = color565(0, 255, 255);
+const uint16_t myMAGENTA = color565(255, 0, 255);
+const uint16_t myBLACK = color565(0, 0, 0);
+const uint16_t timeoutColor = color565(0, 50, 50);
 
-uint16_t myCOLORS[9]={myBLACK,myRED,myGREEN,myBLUE,myOrange,myYELLOW,myCYAN,myMAGENTA,myWHITE};
+const uint16_t myCOLORS[9] = {myBLACK,myRED,myGREEN,myBLUE,myOrange,myYELLOW,myCYAN,myMAGENTA,myWHITE};
 
 
 float zoomMandelbrot = 1.0;
@@ -105,8 +105,8 @@ float zoomMandelbrot = 1.0;
 boolean off = false;
 
 // US Eastern Time Zone (New York, Detroit)
-TimeChangeRule myDST = {"EDT", Second, Sun, Mar, 2, 120};    // Daylight time = UTC - 4 hours
-TimeChangeRule mySTD = {"EST", First, Sun, Nov, 2, 60};     // Standard time = UTC - 5 hours
+const TimeChangeRule myDST PROGMEM = {"EDT", Second, Sun, Mar, 2, 120};    // Daylight time = UTC - 4 hours
+const TimeChangeRule mySTD PROGMEM = {"EST", First, Sun, Nov, 2, 60};     // Standard time = UTC - 5 hours
 Timezone myTZ(myDST, mySTD);
 
 // If TimeChangeRules are already stored in EEPROM, comment out the three
@@ -139,7 +139,7 @@ void display_update_enable(bool is_enable)
 const int ESP_BUILTIN_LED = 2;
 // Rather than declaring the whole NeoPixel object here, we just create
 // a pointer for one, which we'll then allocate later...
-char scrollingText[512] = "VSV Jena 90 e.V. : Gastmannschaft";
+char scrollingText[100] = "VSV Jena 90 e.V. : Gastmannschaft";
 
 
 WiFiUDP Udp;
@@ -151,7 +151,7 @@ unsigned int localUdpPort = 4210;
 char incomingPacket[255];
 //char incomingPacket[64*32*3];
 IPAddress masterIp;
-int mode = 2;
+int mode = 6;
 Scoreboard *scoreboard;
 TimeSample timeSample(display, timeClient);
 Mandel mandel(display);
@@ -173,7 +173,7 @@ void setupFauxmo() {
   fauxmo.addDevice("Uhr");
 
   fauxmo.setPort(80); // required for gen3 devices
-  fauxmo.enable(true);
+  fauxmo.enable(false);
 
   fauxmo.onSetState([](unsigned char device_id, const char * device_name, bool state, unsigned char value) {
       Serial.printf("[MAIN] Device #%d (%s) state: %s value: %d\n", device_id, device_name, state ? "ON" : "OFF", value);
@@ -278,7 +278,7 @@ void setupDisplay() {
 
   // Allocate memory and start DMA display
   if( not dma_display->begin() )
-      Serial.println("****** !KABOOM! I2S memory allocation failed ***********");
+      Serial.println(F("****** !KABOOM! I2S memory allocation failed ***********"));
 
   // create VirtualDisplay object based on our newly created dma_display object
   display = new VirtualMatrixPanel((*dma_display), NUM_ROWS, NUM_COLS, 64, 32, VIRTUAL_MATRIX_CHAIN_TYPE);
@@ -289,14 +289,14 @@ void setupDisplay() {
   dma_display->setBrightness8(100);    // range is 0-255, 0 - 0%, 255 - 100%
   display->flipDMABuffer();
 
-  Serial.println("Chain of 4x 64x32 panels for this example:");
-  Serial.println("+---------+---------+");
-  Serial.println("|    4    |    3    |");
-  Serial.println("|         |         |");
-  Serial.println("+---------+---------+");
-  Serial.println("|    1    |    2    |");
-  Serial.println("| (ESP32) |         |");
-  Serial.println("+---------+---------+");
+  Serial.println(F("Chain of 4x 64x32 panels for this example:"));
+  Serial.println(F("+---------+---------+"));
+  Serial.println(F("|    4    |    3    |"));
+  Serial.println(F("|         |         |"));
+  Serial.println(F("+---------+---------+"));
+  Serial.println(F("|    1    |    2    |"));
+  Serial.println(F("| (ESP32) |         |"));
+  Serial.println(F("+---------+---------+"));
   // delay(3000);
 
    // draw blue text
@@ -319,10 +319,10 @@ void setupDisplay() {
 
 void setup() {
   Serial.begin(115200);
-  Serial.println("Booting");
+  Serial.println(F("Booting"));
 
   setupDisplay();
-  Serial.println("finished");
+  Serial.println(F("finished"));
   display->setTextWrap(false);
 
   setupWifiUpdate();
@@ -346,9 +346,9 @@ void detect() {
   // send back a reply, to the IP address and port we got the packet from
   masterIp = Udp.remoteIP();
   Udp.beginPacket(masterIp, 4445);
-  Udp.write(replyPacket, 10);
+  Udp.write(replyPacket);
   Udp.endPacket();
-  Serial.println("Detect received.");
+  Serial.println(F("Detect received."));
   clear();
   showBuffer();
   clear();
@@ -358,7 +358,7 @@ void detect() {
     display->setTextColor(myGREEN);
     display->setTextSize(1);
     display->print("Detect");
-    myDelay(10);
+    delay(10);
     showBuffer();
   }
   clear();
@@ -550,11 +550,17 @@ void receiveUdp() {
 // do something usefull instead of just waiting
 void myDelay(ulong millisecs) {
   long time = millis();
+  bool handled = false;
   while (millis() - time < millisecs) {
-    fauxmo.handle();
-    ArduinoOTA.handle();
-    receiveUdp();
-    yield();
+    if (!handled) {
+      fauxmo.handle();
+      ArduinoOTA.handle();
+      receiveUdp();
+      yield();
+      handled = true;
+    } else {
+      delay(1);
+    }
   }
 }
 
@@ -616,4 +622,5 @@ void loop() {
   } else {
     myDelay(1);
   }
+  myDelay(1);
 }
