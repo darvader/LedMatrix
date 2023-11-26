@@ -1,6 +1,3 @@
-#define PxMATRIX_double_buffer true
-#define double_buffer
-
 #include <TimeSample.h>
 #include <Globals.h>
 #include <Adafruit_NeoPixel.h>
@@ -302,7 +299,6 @@ void TimeSample::timeSample4() {
 
 
 void TimeSample::timeSnow(bool colored) {
-  Serial.println("Begin Snow");
   #ifdef ESP8266
   static const int size = 1;
   #else
@@ -332,10 +328,7 @@ void TimeSample::timeSnow(bool colored) {
   }
 
   timeClient->update();
-  Serial.println("Time client updated");
-  Serial.printf("Free heap: %d", ESP.getFreeHeap());
   clear();
-  Serial.println("cleared");
 
   for (int i = 0; i < numSmallSnows; i++) {
       snow_t* sn = &smallSnows[i];
@@ -355,11 +348,8 @@ void TimeSample::timeSnow(bool colored) {
     }
   }
 
-  Serial.println("Draw time");
   drawTime();
-  Serial.println("Draw time ended");
   showBuffer();
-  Serial.println("End Snow");
 }
 
 #ifdef ESP32

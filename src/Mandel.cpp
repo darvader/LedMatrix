@@ -1,8 +1,10 @@
-#define PxMATRIX_double_buffer true
-#define double_buffer
 
 #include <Mandel.h>
+#ifdef ESP8266
+#define PxMATRIX_double_buffer true
+#define double_buffer
 #include <PxMatrix.h>
+#endif
 // #include <complex>
 #include <Globals.h>
 

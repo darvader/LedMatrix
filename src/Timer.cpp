@@ -1,5 +1,3 @@
-#define double_buffer
-
 #include <Timer.h>
 #include <Globals.h>
 #include <Adafruit_NeoPixel.h>

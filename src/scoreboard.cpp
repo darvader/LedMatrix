@@ -1,6 +1,3 @@
-#define PxMATRIX_double_buffer true
-#define double_buffer
-
 #include <Globals.h>
 #include <scoreboard.h>
 #include <Fonts/Picopixel.h>

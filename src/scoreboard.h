@@ -2,9 +2,9 @@
 #define _SCOREBOARD
 
 
+#include <BaseLedMatrix.h>
 #include <NTPClient.h>
 #include <Globals.h>
-#include <BaseLedMatrix.h>
 
 class Scoreboard: public BaseLedMatrix
 {

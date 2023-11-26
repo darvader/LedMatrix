@@ -1,6 +1,5 @@
 #ifndef __globals_led_h__
 #define __globals_led_h__
-#include<PxMatrix.h>
 #include<Timezone.h>
 
 extern double vReal[];
@@ -29,10 +28,6 @@ extern Timezone myTZ;
 //Timezone myTZ(100);       // assumes rules stored at EEPROM address 100
 
 extern TimeChangeRule *tcr;        // pointer to the time change rule, use to get TZ abbrev
-
-#define PxMATRIX_double_buffer true
-#define double_buffer
-
 
 #ifdef ESP8266
     #define matrix_width 64

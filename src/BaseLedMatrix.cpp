@@ -2,6 +2,7 @@
 
 void BaseLedMatrix::clear() {
   #ifdef ESP8266
+    Serial.printf("The address of display is %p\n", (void*)display);
     display->clearDisplay();
   #endif
   #ifdef ESP32

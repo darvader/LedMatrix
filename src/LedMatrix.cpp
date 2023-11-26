@@ -1,7 +1,9 @@
+#ifdef ESP8266
 // Creates a second buffer for background drawing (doubles the required RAM)
 #define PxMATRIX_double_buffer true
 #define double_buffer
 #include <PxMatrix.h>
+#endif
 
 #include <Arduino.h>
 #include <WiFiUdp.h>

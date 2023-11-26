@@ -1,8 +1,12 @@
 #include <Arduino.h>
+#ifdef ESP8266
+#define PxMATRIX_double_buffer true
+#define double_buffer
+#include <PxMatrix.h>
+#endif
 //#include <arduinoFFT.h>
 #include <Globals.h>
 #include <FFTLed.h>
-#include <PxMatrix.h>
 
 #define SAMPLES 1              //Must be a power of 2
 #define SAMPLING_FREQUENCY 20000 //Hz, must be 10000 or less due to ADC conversion time. Determines maximum frequency that can be analysed by the FFT.
