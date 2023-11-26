@@ -352,7 +352,6 @@ void TimeSample::timeSnow(bool colored) {
   showBuffer();
 }
 
-#ifdef ESP32
 int TimeSample::countAliveNeighbors(uint8_t  x, uint8_t  y) {
   uint8_t  count = 0;
   for (int8_t   i = -1; i <= 1; i++) {
@@ -404,6 +403,9 @@ void TimeSample::timeGameOfLife() {
   
   int changes = 0;
   for (int y = 0; y < GRIDY; y++) {
+    #ifdef ESP8266 
+      yield(); 
+    #endif
     for (int x = 0; x < GRIDX; x++) {
       int aliveNeighbors = countAliveNeighbors(x, y);
       if (get(grid, x, y)) { // survive part
@@ -460,34 +462,39 @@ void TimeSample::timeGameOfLife() {
         }
         
       }
-    #ifdef ESP32
       if (get(oldGrid, x, y) != get(newGrid, x, y)) {
-    #else
-      if (grid[x][y] != newGrid[x][y]) {
-    #endif
+      // if (grid[x][y] != newGrid[x][y]) {
         changes++;
       }
     }
   }
 
   // re-initialize if nothing much changes or at least after 2 mins
+#ifdef ESP32
   if ((changes < (GRIDX * GRIDY) / 4000) || 
+#else
+  if ((changes < (GRIDX * GRIDY) / 1000) || 
+#endif
     (millis() - startTime > 240000)) {
     initializedGOL = false;
   }
 
 // Swap grids
   for (int y = 0; y < GRIDY; y++) {
-    for (int x = 0; x < GRIDX_BYTE; x++) {
-    #ifdef ESP32
-      oldGrid[x][y] = grid[x][y];
+    #ifdef ESP8266 
+      yield(); 
     #endif
+    for (int x = 0; x < GRIDX_BYTE; x++) {
+      oldGrid[x][y] = grid[x][y];
       grid[x][y] = newGrid[x][y];
     }
   }
 
   // Draw the grid
   for (int y = 0; y < GRIDY; y++) {
+    #ifdef ESP8266 
+      yield(); 
+    #endif
     for (int x = 0; x < GRIDX; x++) {
       display->drawPixel(x, y, get(grid,x,y) ? myCOLORS[countAliveNeighbors(x, y)] : myBLACK);
     }
@@ -497,4 +504,3 @@ void TimeSample::timeGameOfLife() {
 
   showBuffer();
 }
-#endif

@@ -552,17 +552,11 @@ void receiveUdp() {
 // do something usefull instead of just waiting
 void myDelay(ulong millisecs) {
   long time = millis();
-  bool handled = false;
   while (millis() - time < millisecs) {
-    if (!handled) {
-      fauxmo.handle();
-      ArduinoOTA.handle();
-      receiveUdp();
-      yield();
-      handled = true;
-    } else {
-      delay(1);
-    }
+    yield();
+    fauxmo.handle();
+    ArduinoOTA.handle();
+    receiveUdp();
   }
 }
 
@@ -602,12 +596,10 @@ void loop() {
       timeSample.timeSnow(true);
       myDelay(20);
       break;
-#ifdef ESP32      
     case 9:
-      timeSample->timeGameOfLife();
-      myDelay(1);
+      timeSample.timeGameOfLife();
+      myDelay(30);
       break;
-#endif
     case 60:
       mandel.mandelbrot();
       myDelay(1);
@@ -624,5 +616,4 @@ void loop() {
   } else {
     myDelay(1);
   }
-  myDelay(1);
 }
