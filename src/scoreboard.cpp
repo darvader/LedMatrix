@@ -80,8 +80,8 @@ void Scoreboard::showTime() {
 #ifdef ESP32
   display->setCursor(40, 33);
 #else
-  display->setCursor(18, 20);
   display->setFont(&Picopixel);
+  display->setCursor(18, 20);
 #endif
 
   display->printf("%02d:%02d:%02d", hour(local), minute(local), second(local));
