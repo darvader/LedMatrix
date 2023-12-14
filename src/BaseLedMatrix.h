@@ -5,6 +5,8 @@
 #define PxMATRIX_double_buffer true
 #define double_buffer
 #include <PxMatrix.h>
+#else
+#include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 #endif
 class BaseLedMatrix {
     protected:
@@ -13,7 +15,6 @@ class BaseLedMatrix {
 
 #endif
 #ifdef ESP32
-#include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
         VirtualMatrixPanel *display;
 #endif
         void clear();

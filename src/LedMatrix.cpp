@@ -54,11 +54,11 @@
 
     // placeholder for the virtual display object
     VirtualMatrixPanel  *display = nullptr;
-    uint8_t replyPacket[] = "LedMatrix";
+    const uint8_t replyPacket[] = "LedMatrix";
 
 #endif
 
-uint8_t display_draw_time=10; //30-70 is usually fine
+uint8_t display_draw_time=40; //30-70 is usually fine
 #ifdef ESP8266
 
 #include <ESP8266WiFi.h>
@@ -153,11 +153,11 @@ unsigned int localUdpPort = 4210;
 char incomingPacket[255];
 //char incomingPacket[64*32*3];
 IPAddress masterIp;
-int mode = 6;
+int mode = 8;
 Scoreboard *scoreboard;
-TimeSample timeSample(display, timeClient);
-Mandel mandel(display);
-Timer timer(display);
+TimeSample *timeSample;
+Mandel *mandel;
+Timer *timer;
 fauxmoESP fauxmo;
 
 void setupUdp();
@@ -332,6 +332,9 @@ void setup() {
   setupUdp();
   timeClient->begin();
   scoreboard = new Scoreboard(timeClient, display);
+  timeSample = new TimeSample(display, timeClient);
+  mandel = new Mandel(display);
+  timer = new Timer(display);
 
   logMemory();
 
@@ -348,7 +351,7 @@ void detect() {
   // send back a reply, to the IP address and port we got the packet from
   masterIp = Udp.remoteIP();
   Udp.beginPacket(masterIp, 4445);
-  Udp.write(replyPacket);
+  Udp.write(replyPacket, sizeof(replyPacket));
   Udp.endPacket();
   Serial.println(F("Detect received."));
   clear();
@@ -455,29 +458,29 @@ void receiveUdp() {
       mode = 30;
       uint16_t timeToSet = incomingPacket[6] << 8 | incomingPacket[7];
       Serial.printf("Timer: %d", timeToSet);
-      timer.setTimer(timeToSet);
+      timer->setTimer(timeToSet);
 
       return;
     }
     if (std::strcmp(incomingPacket,"timerStart") == 0) {
-      timer.start();
+      timer->start();
       return;
     }
     if (std::strcmp(incomingPacket,"stopWatch") == 0) {
       mode = 30;
-      timer.stopWatch();
+      timer->stopWatch();
       return;
     }
     if (std::strcmp(incomingPacket,"stopWatchStart") == 0) {
-      timer.stopWatchStart();
+      timer->stopWatchStart();
       return;
     }
     if (std::strcmp(incomingPacket,"stopWatchStop") == 0) {
-      timer.stopWatchStop();
+      timer->stopWatchStop();
       return;
     }
     if (std::strcmp(incomingPacket,"timerPause") == 0) {
-      timer.pause();
+      timer->pause();
       return;
     }
     if (std::strcmp(incomingPacket,"timeout") == 0) {
@@ -502,7 +505,7 @@ void receiveUdp() {
       return;
     }
     if (std::strcmp(incomingPacket,"timeSnow") == 0) {
-      timeSample.initializedSnow = false;
+      timeSample->initializedSnow = false;
       mode = 6;
       return;
     }
@@ -511,12 +514,12 @@ void receiveUdp() {
       return;
     }
     if (std::strcmp(incomingPacket,"timeColoredSnow") == 0) {
-      timeSample.initializedSnow = false;
+      timeSample->initializedSnow = false;
       mode = 8;
       return;
     }
     if (std::strcmp(incomingPacket,"timeGameOfLife") == 0) {
-      timeSample.initializedGOL = false;
+      timeSample->initializedGOL = false;
       mode = 9;
       return;
     }
@@ -569,43 +572,43 @@ void loop() {
       myDelay(2);
       break;
     case 2:
-      timeSample.timeSample1();
+      timeSample->timeSample1();
       myDelay(30);
       break;
     case 3:
-      timeSample.timeSample2();
+      timeSample->timeSample2();
       myDelay(1);
       break;
     case 4:
-      timeSample.timeSample3();
+      timeSample->timeSample3();
       myDelay(1);
       break;
     case 5:
-      timeSample.timeSample4();
+      timeSample->timeSample4();
       myDelay(1);
       break;
     case 6:
-      timeSample.timeSnow(false);
+      timeSample->timeSnow(false);
       myDelay(20);
       break;
     case 7:
-      timeSample.timePlasma();
+      timeSample->timePlasma();
       myDelay(1);
       break;
     case 8:
-      timeSample.timeSnow(true);
+      timeSample->timeSnow(true);
       myDelay(20);
       break;
     case 9:
-      timeSample.timeGameOfLife();
+      timeSample->timeGameOfLife();
       myDelay(30);
       break;
     case 60:
-      mandel.mandelbrot();
+      mandel->mandelbrot();
       myDelay(1);
       break;
     case 30:
-      timer.show();
+      timer->show();
       myDelay(1);
       break;
     default:

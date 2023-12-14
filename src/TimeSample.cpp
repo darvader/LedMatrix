@@ -305,7 +305,7 @@ void TimeSample::timeSnow(bool colored) {
   static const int size = 4;
   #endif
   static const int numSmallSnows = 60*size; 
-  static const int width = display->width()-1; 
+  static const int width = display->width()-1;
   static const int height = display->height()-1; 
 
   static snow_t smallSnows[numSmallSnows];
