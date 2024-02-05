@@ -148,7 +148,7 @@ WiFiUDP Udp;
 WiFiUDP UdpNtp;
 
 const long utcOffsetInSeconds = 60*60*0;
-NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds);
+NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds, 600000);
 unsigned int localUdpPort = 4210;
 char incomingPacket[255];
 //char incomingPacket[64*32*3];
@@ -421,30 +421,37 @@ void receiveUdp() {
     } else
     if (strstr(incomingPacket,"pointsLeft=") != NULL) {
       scoreboard->pointsLeft = incomingPacket[11];
+      mode = 1;
       return;
     }
     if (strstr(incomingPacket,"pointsRight=") != NULL) {
       scoreboard->pointsRight = incomingPacket[12];
+      mode = 1;
       return;
     }
     if (strstr(incomingPacket,"teamLeftServes=") != NULL) {
       scoreboard->teamLeftServes = incomingPacket[15];
+      mode = 1;
       return;
     }
     if (strstr(incomingPacket,"setsLeft=") != NULL) {
       scoreboard->setsLeft = incomingPacket[9];
+      mode = 1;
       return;
     }
     if (strstr(incomingPacket,"setsRight=") != NULL) {
       scoreboard->setsRight = incomingPacket[10];
+      mode = 1;
       return;
     }
     if (strstr(incomingPacket,"updateScore=") != NULL) {
       scoreboard->updateScore();
+      mode = 1;
       return;
     } 
     if (strstr(incomingPacket,"scrollText=") != NULL) {
       scoreboard->updateScrollingText();
+      mode = 1;
       return;
     }
     if (strstr(incomingPacket,"brightness=") != NULL) {

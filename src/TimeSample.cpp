@@ -45,9 +45,9 @@ void TimeSample::drawTimeWithBackground() {
   static int width = display->width();
   static int height = display->height();
 #ifdef ESP32
-  display->fillRect(9, 10, 49, 9, myBLACK);
+  display->fillRect(39, height/2-5, 49, 9, myBLACK);
 #else
-  display->fillRect(9, height/2-6, 49*x, 9*x, myBLACK);
+  display->fillRect(9, 10, 49, 9, myBLACK);
 #endif
   drawTime();
 }
