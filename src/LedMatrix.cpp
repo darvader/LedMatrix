@@ -17,6 +17,7 @@
 #include <TimeSample.h>
 #include <Mandel.h>
 #include <Timer.h>
+#include <Counter.h>
 #include <fauxmoESP.h>
 
 
@@ -158,6 +159,7 @@ Scoreboard *scoreboard;
 TimeSample *timeSample;
 Mandel *mandel;
 Timer *timer;
+Counter *counter;
 fauxmoESP fauxmo;
 
 void setupUdp();
@@ -327,6 +329,7 @@ void setup() {
   Serial.println(F("finished"));
   display->setTextWrap(false);
 
+  ArduinoOTA.setHostname("LedMatrix4x4");
   setupWifiUpdate();
   setupFauxmo();
   setupUdp();
@@ -335,6 +338,7 @@ void setup() {
   timeSample = new TimeSample(display, timeClient);
   mandel = new Mandel(display);
   timer = new Timer(display);
+  counter = new Counter(display);
 
   logMemory();
 
@@ -539,6 +543,16 @@ void receiveUdp() {
       zoomMandelbrot = 1.0;
       return;
     }
+    if (strstr(incomingPacket,"counter=") != NULL) {
+      counter->counter = incomingPacket[8] << 8 | incomingPacket[9];
+      mode = 40;
+      return;
+    }
+    if (strstr(incomingPacket,"counterReset") != NULL) {
+      counter->counter = 0;
+      mode = 40;
+      return;
+    }
     if (mode == 20) {
       displayPicture(); 
 
@@ -617,6 +631,10 @@ void loop() {
     case 30:
       timer->show();
       myDelay(1);
+      break;
+    case 40:
+      counter->show();
+      myDelay(30);
       break;
     default:
       myDelay(1);
