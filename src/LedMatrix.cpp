@@ -338,7 +338,7 @@ void setup() {
   timeSample = new TimeSample(display, timeClient);
   mandel = new Mandel(display);
   timer = new Timer(display);
-  counter = new Counter(display);
+  counter = new Counter(display, timeClient);
 
   logMemory();
 
@@ -634,7 +634,7 @@ void loop() {
       break;
     case 40:
       counter->show();
-      myDelay(30);
+      myDelay(1);
       break;
     default:
       myDelay(1);
