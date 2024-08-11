@@ -5,6 +5,15 @@
 #include <NTPClient.h>
 class Counter: public BaseLedMatrix
 {
+
+struct runner_t {
+  float speed;
+  float distance;
+  float position;
+  float radius;
+  uint8_t r, g, b;
+};
+
 private:
     /* data */
 public:
@@ -22,6 +31,7 @@ public:
     void show();
     void setCounter(u_int16_t counter);
     void inline drawTime();
-    void runningDots();
+    void drawRunners();
+    void createRunner(runner_t *runner);
 };
 #endif

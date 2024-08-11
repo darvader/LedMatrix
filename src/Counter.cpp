@@ -46,26 +46,54 @@ void Counter::start() {
     this->counter = 0;
 }
 
-void Counter::runningDots() {
+void Counter::createRunner(runner_t *runner)
+{
+    float speed = random(100) * 0.02f + 0.5f;
+    runner->speed = speed;
+    runner->r = random(255) * speed;
+    runner->g = random(255) * speed;
+    runner->b = random(255) * speed;
+    runner->distance = 0.0f;
+    runner->position = 0.0f;
+    runner->radius = 0.7f + 0.004f*random(100);
+}
+
+
+void Counter::drawRunners() {
     const int width = 128;
     const int height = 64;
     const int a = 60; // semi-major axis
     const int b = 30; // semi-minor axis
     const int centerX = width / 2;
     const int centerY = height / 2;
-    const int numDots = 20; // number of dots around the ellipse
-    const float step = M_TWOPI / numDots; // step size for each dot
-    static float position = 0.0f;
+    const int numRunners = 200; // number of dots around the ellipse
+    static boolean initialized = false;
+    static runner_t runners[numRunners];
 
-    if (position > M_TWOPI) position = 0.0f;
-    position += M_PI/1000.0f;
-    for (int i = 0; i < numDots; ++i) {
-        float theta = i * step + position;
-        int x = centerX + a * cos(theta);
-        int y = centerY + b * sin(theta);
-        display->drawPixel(x, y, myOrange);
+    if (!initialized) {
+        for (int i = 0; i < numRunners; i++) {
+            runner_t* runner = &runners[i];
+            createRunner(runner);
+        }
+        
+        initialized = true;
     }
 
+
+    for (int i = 0; i < numRunners; i++) {
+        runner_t *runner = &runners[i];
+        runner->position += (M_PI/1000.0f)*runner->speed;
+
+        float theta = runner->position;
+        int x = centerX + a * cos(theta)*runner->radius;
+        int y = centerY + b * sin(theta)*runner->radius;
+        display->drawPixelRGB888(x, y, runner->r, runner->g, runner->b);
+
+        // after three rounds, create a new runner
+        if (runner->position > M_TWOPI * 3) {
+            createRunner(runner);
+        }
+    }
 }
 
 int countDigits(int num) {
@@ -75,7 +103,7 @@ int countDigits(int num) {
 
 void Counter::show() {
     clear();
-    runningDots();
+    drawRunners();
     display->setTextSize(TEXTSIZE);
     display->setTextColor(myGREEN);
     display->setCursor(13,4);

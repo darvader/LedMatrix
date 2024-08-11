@@ -19,6 +19,7 @@
 #include <Timer.h>
 #include <Counter.h>
 #include <fauxmoESP.h>
+#include <EEPROM.h>
 
 
 // Pins for LED MATRIX
@@ -166,6 +167,16 @@ void setupUdp();
 void receiveUdp();
 void displayOff();
 void myDelay(ulong millisecs);
+
+void setupEEPROM() {
+  EEPROM.begin(8);
+
+  mode = EEPROM.read(0);
+
+  if (mode == 40) {
+    counter->counter = EEPROM.readUShort(1);
+  }
+}
 
 void setupFauxmo() {
   fauxmo.addDevice("Uhr 1");
@@ -339,7 +350,7 @@ void setup() {
   mandel = new Mandel(display);
   timer = new Timer(display);
   counter = new Counter(display, timeClient);
-
+  setupEEPROM();
   logMemory();
 
 }
@@ -394,6 +405,14 @@ void displayPicture() {
     
   }
   showBuffer();
+}
+
+void doCounter(uint16_t counterValue) {
+  counter->counter = counterValue;
+  mode = 40;
+  EEPROM.write(0, mode);
+  EEPROM.writeUInt(1, counterValue);
+  EEPROM.commit();
 }
 
 void receiveUdp() {
@@ -544,8 +563,8 @@ void receiveUdp() {
       return;
     }
     if (strstr(incomingPacket,"counter=") != NULL) {
-      counter->counter = incomingPacket[8] << 8 | incomingPacket[9];
-      mode = 40;
+      uint16_t counterValue = incomingPacket[8] << 8 | incomingPacket[9];
+      doCounter(counterValue);
       return;
     }
     if (strstr(incomingPacket,"counterReset") != NULL) {
