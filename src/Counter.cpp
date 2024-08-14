@@ -66,7 +66,7 @@ void Counter::drawRunners() {
     const int b = 30; // semi-minor axis
     const int centerX = width / 2;
     const int centerY = height / 2;
-    const int numRunners = 200; // number of dots around the ellipse
+    const int numRunners = 300; // number of dots around the ellipse
     static boolean initialized = false;
     static runner_t runners[numRunners];
 

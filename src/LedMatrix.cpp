@@ -284,6 +284,7 @@ void setupDisplay() {
     HUB75_I2S_CFG::FM6126A      // driver chip
   );
   mxconfig.double_buff = true;
+  mxconfig.clkphase = false;
   // mxconfig.setPixelColorDepthBits(6);
   // mxconfig.i2sspeed = HUB75_I2S_CFG::HZ_20M;
   // OK, now we can create our matrix object
