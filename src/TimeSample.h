@@ -4,6 +4,7 @@
 
 #include <NTPClient.h>
 #include <BaseLedMatrix.h>
+#include <Counter.h>
 
 #ifdef ESP32
     #define GRIDX 128
@@ -31,14 +32,15 @@ private:
     void set(byte grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y, bool value);
 public:
     NTPClient *timeClient;
+    Counter *counter;
     boolean initializedSnow = false;
     boolean initializedGOL = false;
 
 #ifdef ESP8266
-    TimeSample(PxMATRIX *display, NTPClient *timeClient);
+    TimeSample(PxMATRIX *display, NTPClient *timeClient, Counter *counter);
 #endif
 #ifdef ESP32
-    TimeSample(VirtualMatrixPanel *display, NTPClient *timeClient);
+    TimeSample(VirtualMatrixPanel *display, NTPClient *timeClient, Counter *counter);
 #endif
     ~TimeSample();
 
@@ -49,6 +51,7 @@ public:
     void timeSample3();
     void timeSample4();
     void timePlasma();
+    void timeEllipse();
     void timeGameOfLife();
     void timeSnow(bool colored);
 };

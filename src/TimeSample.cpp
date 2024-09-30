@@ -3,17 +3,19 @@
 #include <Adafruit_NeoPixel.h>
 #include <TimeLedMatrix.h>
 #include <FastLED.h>
+#include <Counter.h>
 
 #ifdef ESP8266
-TimeSample::TimeSample(PxMATRIX *display, NTPClient *timeClient)
+TimeSample::TimeSample(PxMATRIX *display, NTPClient *timeClient, Counter *counter)
 {
 #endif
 #ifdef ESP32
-TimeSample::TimeSample(VirtualMatrixPanel *display, NTPClient *timeClient)
+TimeSample::TimeSample(VirtualMatrixPanel *display, NTPClient *timeClient, Counter *counter)
 {
 #endif
     this->display = display;
     this->timeClient = timeClient;
+    this->counter = counter;
     setupTime();
 }
 
@@ -239,6 +241,14 @@ void TimeSample::timeSample4() {
 
   showBuffer();
 }
+
+  void TimeSample::timeEllipse() {
+    clear();
+    counter->drawRunners();
+    drawTime();
+
+    showBuffer();
+  }
 
   void TimeSample::timePlasma()
   {

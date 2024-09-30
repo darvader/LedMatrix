@@ -48,14 +48,14 @@ void Counter::start() {
 
 void Counter::createRunner(runner_t *runner)
 {
-    float speed = random(100) * 0.02f + 0.5f;
+    float speed = random(100) * 0.01f + 0.2f;
     runner->speed = speed;
     runner->r = random(255) * speed;
     runner->g = random(255) * speed;
     runner->b = random(255) * speed;
     runner->distance = 0.0f;
     runner->position = 0.0f;
-    runner->radius = 0.7f + 0.004f*random(100);
+    runner->radius = 0.5f + 0.006f*random(100);
 }
 
 
@@ -66,7 +66,7 @@ void Counter::drawRunners() {
     const int b = 30; // semi-minor axis
     const int centerX = width / 2;
     const int centerY = height / 2;
-    const int numRunners = 300; // number of dots around the ellipse
+    const int numRunners = 400; // number of dots around the ellipse
     static boolean initialized = false;
     static runner_t runners[numRunners];
 

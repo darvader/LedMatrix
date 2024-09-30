@@ -155,7 +155,7 @@ unsigned int localUdpPort = 4210;
 char incomingPacket[255];
 //char incomingPacket[64*32*3];
 IPAddress masterIp;
-int mode = 8;
+int mode = 10;
 Scoreboard *scoreboard;
 TimeSample *timeSample;
 Mandel *mandel;
@@ -165,6 +165,7 @@ fauxmoESP fauxmo;
 
 void setupUdp();
 void receiveUdp();
+void write();
 void displayOff();
 void myDelay(ulong millisecs);
 
@@ -347,10 +348,10 @@ void setup() {
   setupUdp();
   timeClient->begin();
   scoreboard = new Scoreboard(timeClient, display);
-  timeSample = new TimeSample(display, timeClient);
+  counter = new Counter(display, timeClient);
+  timeSample = new TimeSample(display, timeClient, counter);
   mandel = new Mandel(display);
   timer = new Timer(display);
-  counter = new Counter(display, timeClient);
   setupEEPROM();
   logMemory();
 
@@ -414,6 +415,17 @@ void doCounter(uint16_t counterValue) {
   EEPROM.write(0, mode);
   EEPROM.writeUInt(1, counterValue);
   EEPROM.commit();
+}
+
+void write(int mode)
+{
+  EEPROM.write(0, mode);
+  EEPROM.commit();
+}
+
+void startEllipse() {
+  mode = 11;
+  write(11);
 }
 
 void receiveUdp() {
@@ -554,6 +566,10 @@ void receiveUdp() {
       mode = 9;
       return;
     }
+    if (std::strcmp(incomingPacket,"timeEllipse") == 0) {
+      startEllipse();
+      return;
+    }
     if (std::strcmp(incomingPacket,"scoreboard") == 0) {
       mode = 1;
       return;
@@ -643,6 +659,10 @@ void loop() {
     case 9:
       timeSample->timeGameOfLife();
       myDelay(30);
+      break;
+    case 11:
+      timeSample->timeEllipse();
+      myDelay(1);
       break;
     case 60:
       mandel->mandelbrot();
