@@ -27,6 +27,9 @@ private:
     uint8_t  **oldGrid = nullptr;
     uint8_t  **grid = nullptr;
     uint8_t  **newGrid = nullptr;
+    
+    void *stars = nullptr;  // void pointer to avoid struct declaration in header
+    
     int countAliveNeighbors(uint8_t  x, uint8_t  y);
     bool get(byte **grid, uint8_t  x, uint8_t  y);
     void set(byte **grid, uint8_t  x, uint8_t  y, bool value);
@@ -34,11 +37,14 @@ private:
     void freeGOLGrids();
     void initializeCircleVals();
     void freeCircleVals();
+    void freeStars();
 public:
     NTPClient *timeClient;
     Counter *counter;
     boolean initializedSnow = false;
     boolean initializedGOL = false;
+    
+    void freeAllResources();  // Public method to free all allocated memory
 
 #ifdef ESP8266
     TimeSample(PxMATRIX *display, NTPClient *timeClient, Counter *counter);

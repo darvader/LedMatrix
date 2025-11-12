@@ -156,6 +156,7 @@ char incomingPacket[255];
 //char incomingPacket[64*32*3];
 IPAddress masterIp;
 int mode = 12;
+int previousMode = 12;
 Scoreboard *scoreboard;
 TimeSample *timeSample;
 Mandel *mandel;
@@ -612,6 +613,11 @@ void receiveUdp() {
       return;
     } 
 
+    // Free resources when switching between modes
+    if (mode != previousMode) {
+      timeSample->freeAllResources();
+      previousMode = mode;
+    }
 
     digitalWrite(LED_BUILTIN, LOW);
     digitalWrite(LED_BUILTIN, HIGH);

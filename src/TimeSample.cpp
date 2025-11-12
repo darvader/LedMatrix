@@ -21,8 +21,13 @@ TimeSample::TimeSample(VirtualMatrixPanel *display, NTPClient *timeClient, Count
 
 TimeSample::~TimeSample()
 {
+    freeAllResources();
+}
+
+void TimeSample::freeAllResources() {
     freeGOLGrids();
     freeCircleVals();
+    freeStars();
 }
 
 void TimeSample::initializeCircleVals() {
@@ -80,6 +85,20 @@ void TimeSample::freeGOLGrids() {
     }
 }
 
+struct star_t {
+  float x, y;     // position
+  float z;        // depth (distance from viewer)
+  float vz;       // velocity in z direction
+  uint8_t brightness;
+};
+
+void TimeSample::freeStars() {
+    if (stars != nullptr) {
+        delete[] (star_t*)stars;
+        stars = nullptr;
+    }
+}
+
 struct line_t {
   uint16_t color;
   int16_t x1, x2, y1, y2;
@@ -93,13 +112,6 @@ struct snow_t {
   float x, y;
   float speed;
   uint8_t r, g, b;
-};
-
-struct star_t {
-  float x, y;     // position
-  float z;        // depth (distance from viewer)
-  float vz;       // velocity in z direction
-  uint8_t brightness;
 };
 
 void TimeSample::drawTimeWithBackground() {
@@ -585,7 +597,7 @@ void TimeSample::timeGameOfLife() {
 
 void TimeSample::timeStarWars() {
   static const int numStars = 500;  // Reduced to save memory
-  static star_t *stars = nullptr;  // Dynamic allocation
+  star_t *starsArray = (star_t*)stars;  // Cast void pointer to star_t
   static boolean initialized = false;
   static int width = matrix_width;
   static int height = matrix_height;
@@ -596,15 +608,16 @@ void TimeSample::timeStarWars() {
     // Dynamically allocate stars only when needed
     if (stars == nullptr) {
       stars = new star_t[numStars];
+      starsArray = (star_t*)stars;
     }
     
     // Initialize stars at random positions
     for (int i = 0; i < numStars; i++) {
-      stars[i].x = random(-width, width);
-      stars[i].y = random(-height, height);
-      stars[i].z = random(1, width);  // depth
-      stars[i].vz = random(5, 15) / 10.0;  // speed varies 0.5 to 1.5
-      stars[i].brightness = random(128, 255);
+      starsArray[i].x = random(-width, width);
+      starsArray[i].y = random(-height, height);
+      starsArray[i].z = random(1, width);  // depth
+      starsArray[i].vz = random(5, 15) / 10.0;  // speed varies 0.5 to 1.5
+      starsArray[i].brightness = random(128, 255);
     }
     initialized = true;
   }
@@ -620,32 +633,32 @@ void TimeSample::timeStarWars() {
     #endif
     
     // Move star closer
-    stars[i].z -= stars[i].vz;
+    starsArray[i].z -= starsArray[i].vz;
     
     // If star passes the viewer, reset it to the back
-    if (stars[i].z <= 0) {
-      stars[i].x = random(-width, width);
-      stars[i].y = random(-height, height);
-      stars[i].z = width;
-      stars[i].vz = random(5, 15) / 10.0;  // speed varies 0.5 to 1.5
-      stars[i].brightness = random(128, 255);
+    if (starsArray[i].z <= 0) {
+      starsArray[i].x = random(-width, width);
+      starsArray[i].y = random(-height, height);
+      starsArray[i].z = width;
+      starsArray[i].vz = random(5, 15) / 10.0;  // speed varies 0.5 to 1.5
+      starsArray[i].brightness = random(128, 255);
     }
     
     // Project 3D position to 2D screen
-    float k = width / stars[i].z;  // perspective factor
-    int sx = (int)(stars[i].x * k + centerX);
-    int sy = (int)(stars[i].y * k + centerY);
+    float k = width / starsArray[i].z;  // perspective factor
+    int sx = (int)(starsArray[i].x * k + centerX);
+    int sy = (int)(starsArray[i].y * k + centerY);
     
     // Calculate previous position for streak effect
-    float prevZ = stars[i].z + stars[i].vz;
+    float prevZ = starsArray[i].z + starsArray[i].vz;
     float prevK = width / prevZ;
-    int px = (int)(stars[i].x * prevK + centerX);
-    int py = (int)(stars[i].y * prevK + centerY);
+    int px = (int)(starsArray[i].x * prevK + centerX);
+    int py = (int)(starsArray[i].y * prevK + centerY);
     
     // Draw star only if on screen
     if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
       // Calculate brightness based on depth (closer = brighter)
-      uint8_t brightness = (uint8_t)(stars[i].brightness * (1.0 - stars[i].z / width));
+      uint8_t brightness = (uint8_t)(starsArray[i].brightness * (1.0 - starsArray[i].z / width));
       
       // Star color: white/blue tint
       uint8_t r = brightness;
@@ -655,14 +668,14 @@ void TimeSample::timeStarWars() {
       uint16_t color = display->color565(r, g, b);
       
       // Draw motion streak for faster stars
-      if (stars[i].vz > 0.8 && px >= 0 && px < width && py >= 0 && py < height) {
+      if (starsArray[i].vz > 0.8 && px >= 0 && px < width && py >= 0 && py < height) {
         display->drawLine(px, py, sx, sy, color);
       } else {
         // Draw single pixel for slower stars
         display->drawPixel(sx, sy, color);
         
         // Draw larger stars when they're closer
-        if (stars[i].z < width / 4) {
+        if (starsArray[i].z < width / 4) {
           if (sx + 1 < width) display->drawPixel(sx + 1, sy, color);
           if (sy + 1 < height) display->drawPixel(sx, sy + 1, color);
         }
