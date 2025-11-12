@@ -616,6 +616,7 @@ void receiveUdp() {
     // Free resources when switching between modes
     if (mode != previousMode) {
       timeSample->freeAllResources();
+      counter->freeAllResources();
       previousMode = mode;
     }
 

@@ -19,6 +19,31 @@ Counter::Counter(VirtualMatrixPanel *display, NTPClient *timeClient)
 
 Counter::~Counter()
 {
+    freeAllResources();
+}
+
+void Counter::freeRunners() {
+    if (runners != nullptr) {
+        delete[] (runner_t*)runners;
+        runners = nullptr;
+        initializedRunners = false;
+    }
+}
+
+void Counter::freeAllResources() {
+    freeRunners();
+}
+
+void Counter::initializeRunners() {
+    const int numRunners = 400;
+    runners = new runner_t[numRunners];
+    runner_t* runnersArray = (runner_t*)runners;
+    
+    for (int i = 0; i < numRunners; i++) {
+        createRunner(&runnersArray[i]);
+    }
+    
+    initializedRunners = true;
 }
 
 void inline Counter::drawTime() {
@@ -67,21 +92,15 @@ void Counter::drawRunners() {
     const int centerX = width / 2;
     const int centerY = height / 2;
     const int numRunners = 400; // number of dots around the ellipse
-    static boolean initialized = false;
-    static runner_t runners[numRunners];
 
-    if (!initialized) {
-        for (int i = 0; i < numRunners; i++) {
-            runner_t* runner = &runners[i];
-            createRunner(runner);
-        }
-        
-        initialized = true;
+    if (!initializedRunners) {
+        initializeRunners();
     }
 
+    runner_t* runnersArray = (runner_t*)runners;
 
     for (int i = 0; i < numRunners; i++) {
-        runner_t *runner = &runners[i];
+        runner_t *runner = &runnersArray[i];
         runner->position += (M_PI/1000.0f)*runner->speed;
 
         float theta = runner->position;

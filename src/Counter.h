@@ -15,7 +15,10 @@ struct runner_t {
 };
 
 private:
-    /* data */
+    void *runners = nullptr;
+    bool initializedRunners = false;
+    void freeRunners();
+    void initializeRunners();
 public:
     NTPClient *timeClient;
     u_int16_t counter = 0;
@@ -33,5 +36,6 @@ public:
     void inline drawTime();
     void drawRunners();
     void createRunner(runner_t *runner);
+    void freeAllResources();
 };
 #endif

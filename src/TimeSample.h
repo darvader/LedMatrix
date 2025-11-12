@@ -29,6 +29,7 @@ private:
     uint8_t  **newGrid = nullptr;
     
     void *stars = nullptr;  // void pointer to avoid struct declaration in header
+    void *snowParticles = nullptr;  // void pointer for snow particles
     
     int countAliveNeighbors(uint8_t  x, uint8_t  y);
     bool get(byte **grid, uint8_t  x, uint8_t  y);
@@ -38,6 +39,8 @@ private:
     void initializeCircleVals();
     void freeCircleVals();
     void freeStars();
+    void freeSnow();
+    void initializeSnow(bool colored);
 public:
     NTPClient *timeClient;
     Counter *counter;

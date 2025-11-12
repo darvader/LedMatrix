@@ -28,6 +28,7 @@ void TimeSample::freeAllResources() {
     freeGOLGrids();
     freeCircleVals();
     freeStars();
+    freeSnow();
 }
 
 void TimeSample::initializeCircleVals() {
@@ -92,6 +93,14 @@ struct star_t {
   uint8_t brightness;
 };
 
+enum Snow { small, medium, large };
+struct snow_t {
+  Snow type;
+  float x, y;
+  float speed;
+  uint8_t r, g, b;
+};
+
 void TimeSample::freeStars() {
     if (stars != nullptr) {
         delete[] (star_t*)stars;
@@ -99,19 +108,48 @@ void TimeSample::freeStars() {
     }
 }
 
+void TimeSample::freeSnow() {
+    if (snowParticles != nullptr) {
+        delete[] (snow_t*)snowParticles;
+        snowParticles = nullptr;
+        initializedSnow = false;
+    }
+}
+
+void TimeSample::initializeSnow(bool colored) {
+    #ifdef ESP8266
+    const int size = 1;
+    #else
+    const int size = 4;
+    #endif
+    const int numSmallSnows = 60*size;
+    const int width = display->width()-1;
+    const int height = display->height()-1;
+    
+    snowParticles = new snow_t[numSmallSnows];
+    snow_t* smallSnows = (snow_t*)snowParticles;
+    
+    for (int i = 0; i < numSmallSnows; i++) {
+        snow_t* snow = &smallSnows[i];
+        snow->type = small;
+        snow->x = random(width);
+        snow->y = random(height);
+        snow->speed = random(1, 10)/10.0f;
+        if (colored) {
+            snow->r = random(255);
+            snow->b = random(255);
+            snow->g = random(255);
+        }
+    }
+    
+    initializedSnow = true;
+}
+
 struct line_t {
   uint16_t color;
   int16_t x1, x2, y1, y2;
   double arc;
   double degree;
-};
-
-enum Snow { small, medium, large };
-struct snow_t {
-  Snow type;
-  float x, y;
-  float speed;
-  uint8_t r, g, b;
 };
 
 void TimeSample::drawTimeWithBackground() {
@@ -389,32 +427,19 @@ void TimeSample::timeSample4() {
 
 void TimeSample::timeSnow(bool colored) {
   #ifdef ESP8266
-  static const int size = 1;
+  const int size = 1;
   #else
-  static const int size = 4;
+  const int size = 4;
   #endif
-  static const int numSmallSnows = 60*size; 
-  static const int width = display->width()-1;
-  static const int height = display->height()-1; 
-
-  static snow_t smallSnows[numSmallSnows];
+  const int numSmallSnows = 60*size; 
+  const int width = display->width()-1;
+  const int height = display->height()-1; 
 
   if (!initializedSnow) {
-    for (int i = 0; i < numSmallSnows; i++) {
-      snow_t* snow = &smallSnows[i];
-      snow->type = small;
-      snow->x = random(width);
-      snow->y = random(height);
-      snow->speed = random(1, 10)/10.0f;
-      if (colored) {
-        snow->r = random(255);
-        snow->b = random(255);
-        snow->g = random(255);
-      }
-    }    
-
-    initializedSnow = true;
+    initializeSnow(colored);
   }
+
+  snow_t* smallSnows = (snow_t*)snowParticles;
 
   timeClient->update();
   clear();
