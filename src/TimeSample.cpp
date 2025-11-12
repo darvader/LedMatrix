@@ -38,6 +38,13 @@ struct snow_t {
   uint8_t r, g, b;
 };
 
+struct star_t {
+  float x, y;     // position
+  float z;        // depth (distance from viewer)
+  float vz;       // velocity in z direction
+  uint8_t brightness;
+};
+
 void TimeSample::drawTimeWithBackground() {
   #ifdef ESP8266
   static int x = 1;
@@ -241,6 +248,8 @@ void TimeSample::timeSample4() {
 
   showBuffer();
 }
+
+
 
   void TimeSample::timeEllipse() {
     clear();
@@ -514,3 +523,88 @@ void TimeSample::timeGameOfLife() {
 
   showBuffer();
 }
+
+void TimeSample::timeStarWars() {
+  static const int numStars = 200;
+  static star_t stars[numStars];
+  static boolean initialized = false;
+  static int width = matrix_width;
+  static int height = matrix_height;
+  static float centerX = width / 2.0;
+  static float centerY = height / 2.0;
+
+  if (!initialized) {
+    // Initialize stars at random positions
+    for (int i = 0; i < numStars; i++) {
+      stars[i].x = random(-width, width);
+      stars[i].y = random(-height, height);
+      stars[i].z = random(1, width);  // depth
+      stars[i].vz = random(5, 15) / 10.0;  // speed varies
+      stars[i].brightness = random(128, 255);
+    }
+    initialized = true;
+  }
+
+  clear();
+
+  // Update and draw stars
+  for (int i = 0; i < numStars; i++) {
+    #ifdef ESP8266 
+      if (i % 20 == 0) yield();
+    #endif
+    
+    // Move star closer (increase z)
+    stars[i].z -= stars[i].vz;
+    
+    // If star passes the viewer, reset it to the back
+    if (stars[i].z <= 0) {
+      stars[i].x = random(-width, width);
+      stars[i].y = random(-height, height);
+      stars[i].z = width;
+      stars[i].vz = random(5, 15) / 10.0;
+      stars[i].brightness = random(128, 255);
+    }
+    
+    // Project 3D position to 2D screen
+    float k = width / stars[i].z;  // perspective factor
+    int sx = (int)(stars[i].x * k + centerX);
+    int sy = (int)(stars[i].y * k + centerY);
+    
+    // Calculate previous position for streak effect
+    float prevZ = stars[i].z + stars[i].vz;
+    float prevK = width / prevZ;
+    int px = (int)(stars[i].x * prevK + centerX);
+    int py = (int)(stars[i].y * prevK + centerY);
+    
+    // Draw star only if on screen
+    if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
+      // Calculate brightness based on depth (closer = brighter)
+      uint8_t brightness = (uint8_t)(stars[i].brightness * (1.0 - stars[i].z / width));
+      
+      // Star color: white/blue tint
+      uint8_t r = brightness;
+      uint8_t g = brightness;
+      uint8_t b = min(255, brightness + 30);  // slight blue tint
+      
+      uint16_t color = display->color565(r, g, b);
+      
+      // Draw motion streak for faster stars
+      if (stars[i].vz > 0.8 && px >= 0 && px < width && py >= 0 && py < height) {
+        display->drawLine(px, py, sx, sy, color);
+      } else {
+        // Draw single pixel for slower stars
+        display->drawPixel(sx, sy, color);
+        
+        // Draw larger stars when they're closer
+        if (stars[i].z < width / 4) {
+          if (sx + 1 < width) display->drawPixel(sx + 1, sy, color);
+          if (sy + 1 < height) display->drawPixel(sx, sy + 1, color);
+        }
+      }
+    }
+  }
+
+  drawTimeWithBackground();
+  showBuffer();
+}
+

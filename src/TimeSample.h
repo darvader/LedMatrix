@@ -54,5 +54,6 @@ public:
     void timeEllipse();
     void timeGameOfLife();
     void timeSnow(bool colored);
+    void timeStarWars();
 };
 #endif

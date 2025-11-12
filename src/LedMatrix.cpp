@@ -108,9 +108,9 @@ float zoomMandelbrot = 1.0;
 
 boolean off = false;
 
-// US Eastern Time Zone (New York, Detroit)
-const TimeChangeRule myDST PROGMEM = {"EDT", Second, Sun, Mar, 2, 120};    // Daylight time = UTC - 4 hours
-const TimeChangeRule mySTD PROGMEM = {"EST", First, Sun, Nov, 2, 60};     // Standard time = UTC - 5 hours
+// Central European Time Zone (Germany)
+const TimeChangeRule myDST PROGMEM = {"CEST", Last, Sun, Mar, 2, 120};    // Daylight time = UTC + 2 hours
+const TimeChangeRule mySTD PROGMEM = {"CET", Last, Sun, Oct, 3, 60};      // Standard time = UTC + 1 hour
 Timezone myTZ(myDST, mySTD);
 
 // If TimeChangeRules are already stored in EEPROM, comment out the three
@@ -150,12 +150,12 @@ WiFiUDP Udp;
 WiFiUDP UdpNtp;
 
 const long utcOffsetInSeconds = 60*60*0;
-NTPClient *timeClient = new NTPClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds, 600000);
+NTPClient timeClient(UdpNtp, "pool.ntp.org", utcOffsetInSeconds, 600000);
 unsigned int localUdpPort = 4210;
 char incomingPacket[255];
 //char incomingPacket[64*32*3];
 IPAddress masterIp;
-int mode = 10;
+int mode = 12;
 Scoreboard *scoreboard;
 TimeSample *timeSample;
 Mandel *mandel;
@@ -346,10 +346,10 @@ void setup() {
   setupWifiUpdate();
   setupFauxmo();
   setupUdp();
-  timeClient->begin();
-  scoreboard = new Scoreboard(timeClient, display);
-  counter = new Counter(display, timeClient);
-  timeSample = new TimeSample(display, timeClient, counter);
+  timeClient.begin();
+  scoreboard = new Scoreboard(&timeClient, display);
+  counter = new Counter(display, &timeClient);
+  timeSample = new TimeSample(display, &timeClient, counter);
   mandel = new Mandel(display);
   timer = new Timer(display);
   setupEEPROM();
@@ -426,6 +426,11 @@ void write(int mode)
 void startEllipse() {
   mode = 11;
   write(11);
+}
+
+void startStarWars() {
+  mode = 12;
+  write(12);
 }
 
 void receiveUdp() {
@@ -566,6 +571,10 @@ void receiveUdp() {
       mode = 9;
       return;
     }
+    if (std::strcmp(incomingPacket,"timeStarWars") == 0) {
+      startStarWars();
+      return;
+    }
     if (std::strcmp(incomingPacket,"timeEllipse") == 0) {
       startEllipse();
       return;
@@ -663,6 +672,10 @@ void loop() {
     case 11:
       timeSample->timeEllipse();
       myDelay(1);
+      break;
+    case 12:
+      timeSample->timeStarWars();
+      myDelay(20);
       break;
     case 60:
       mandel->mandelbrot();
