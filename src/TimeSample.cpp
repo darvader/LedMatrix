@@ -21,6 +21,63 @@ TimeSample::TimeSample(VirtualMatrixPanel *display, NTPClient *timeClient, Count
 
 TimeSample::~TimeSample()
 {
+    freeGOLGrids();
+    freeCircleVals();
+}
+
+void TimeSample::initializeCircleVals() {
+    if (xVals == nullptr) {
+        xVals = new int[360];
+        yVals = new int[360];
+    }
+}
+
+void TimeSample::freeCircleVals() {
+    if (xVals != nullptr) {
+        delete[] xVals;
+        xVals = nullptr;
+    }
+    if (yVals != nullptr) {
+        delete[] yVals;
+        yVals = nullptr;
+    }
+}
+
+void TimeSample::initializeGOLGrids() {
+    if (oldGrid == nullptr) {
+        oldGrid = new uint8_t*[GRIDX_BYTE];
+        grid = new uint8_t*[GRIDX_BYTE];
+        newGrid = new uint8_t*[GRIDX_BYTE];
+        
+        for (int i = 0; i < GRIDX_BYTE; i++) {
+            oldGrid[i] = new uint8_t[GRIDY];
+            grid[i] = new uint8_t[GRIDY];
+            newGrid[i] = new uint8_t[GRIDY];
+            
+            // Initialize to zero
+            for (int j = 0; j < GRIDY; j++) {
+                oldGrid[i][j] = 0;
+                grid[i][j] = 0;
+                newGrid[i][j] = 0;
+            }
+        }
+    }
+}
+
+void TimeSample::freeGOLGrids() {
+    if (oldGrid != nullptr) {
+        for (int i = 0; i < GRIDX_BYTE; i++) {
+            delete[] oldGrid[i];
+            delete[] grid[i];
+            delete[] newGrid[i];
+        }
+        delete[] oldGrid;
+        delete[] grid;
+        delete[] newGrid;
+        oldGrid = nullptr;
+        grid = nullptr;
+        newGrid = nullptr;
+    }
 }
 
 struct line_t {
@@ -208,6 +265,7 @@ void TimeSample::timeSample4() {
   static byte radius = height + 10;
 
   if (!initialized) {
+    initializeCircleVals();  // Allocate memory dynamically
     for (int i = 0; i < 360; i++) {
       xVals[i] = sin(i/180.0 * PI) * radius + width/2;
       yVals[i] = cos(i/180.0 * PI) * radius + height/2;
@@ -385,7 +443,7 @@ int TimeSample::countAliveNeighbors(uint8_t  x, uint8_t  y) {
   return count;
 }
 
-void TimeSample::set(uint8_t grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y, bool value) {
+void TimeSample::set(uint8_t **grid, uint8_t  x, uint8_t  y, bool value) {
     uint8_t  byteIndex = x / 8;  // Find the byte in the array
     uint8_t  bitIndex = x % 8;   // Find the bit in the byte
 
@@ -396,7 +454,7 @@ void TimeSample::set(uint8_t grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y, bo
     }
 }
 
-bool TimeSample::get(byte grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y) {
+bool TimeSample::get(byte **grid, uint8_t  x, uint8_t  y) {
   uint8_t  xByte = x / 8;
   uint8_t  xBit = x % 8;
   return (grid[xByte][y] & (1 << xBit)) != 0;
@@ -407,6 +465,7 @@ void TimeSample::timeGameOfLife() {
   static int startTime = millis();
 
   if (!initializedGOL) {
+    initializeGOLGrids();  // Allocate memory dynamically
     for (int y = 0; y < GRIDY; y++) {
       for (int x = 0; x < GRIDX; x++) {
         set(grid, x, y, (random(2) == 0));
@@ -525,8 +584,8 @@ void TimeSample::timeGameOfLife() {
 }
 
 void TimeSample::timeStarWars() {
-  static const int numStars = 200;
-  static star_t stars[numStars];
+  static const int numStars = 500;  // Reduced to save memory
+  static star_t *stars = nullptr;  // Dynamic allocation
   static boolean initialized = false;
   static int width = matrix_width;
   static int height = matrix_height;
@@ -534,16 +593,23 @@ void TimeSample::timeStarWars() {
   static float centerY = height / 2.0;
 
   if (!initialized) {
+    // Dynamically allocate stars only when needed
+    if (stars == nullptr) {
+      stars = new star_t[numStars];
+    }
+    
     // Initialize stars at random positions
     for (int i = 0; i < numStars; i++) {
       stars[i].x = random(-width, width);
       stars[i].y = random(-height, height);
       stars[i].z = random(1, width);  // depth
-      stars[i].vz = random(5, 15) / 10.0;  // speed varies
+      stars[i].vz = random(5, 15) / 10.0;  // speed varies 0.5 to 1.5
       stars[i].brightness = random(128, 255);
     }
     initialized = true;
   }
+
+  if (stars == nullptr) return;  // Safety check
 
   clear();
 
@@ -553,7 +619,7 @@ void TimeSample::timeStarWars() {
       if (i % 20 == 0) yield();
     #endif
     
-    // Move star closer (increase z)
+    // Move star closer
     stars[i].z -= stars[i].vz;
     
     // If star passes the viewer, reset it to the back
@@ -561,7 +627,7 @@ void TimeSample::timeStarWars() {
       stars[i].x = random(-width, width);
       stars[i].y = random(-height, height);
       stars[i].z = width;
-      stars[i].vz = random(5, 15) / 10.0;
+      stars[i].vz = random(5, 15) / 10.0;  // speed varies 0.5 to 1.5
       stars[i].brightness = random(128, 255);
     }
     

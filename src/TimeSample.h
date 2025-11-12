@@ -21,15 +21,19 @@ class TimeSample: public BaseLedMatrix
 {
 private:
     /* data */
-    int xVals[360];
-    int yVals[360];
+    int *xVals = nullptr;
+    int *yVals = nullptr;
 
-    uint8_t  oldGrid[GRIDX_BYTE][GRIDY];
-    uint8_t  grid[GRIDX_BYTE][GRIDY];
-    uint8_t  newGrid[GRIDX_BYTE][GRIDY];
+    uint8_t  **oldGrid = nullptr;
+    uint8_t  **grid = nullptr;
+    uint8_t  **newGrid = nullptr;
     int countAliveNeighbors(uint8_t  x, uint8_t  y);
-    bool get(byte grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y);
-    void set(byte grid[GRIDX_BYTE][GRIDY], uint8_t  x, uint8_t  y, bool value);
+    bool get(byte **grid, uint8_t  x, uint8_t  y);
+    void set(byte **grid, uint8_t  x, uint8_t  y, bool value);
+    void initializeGOLGrids();
+    void freeGOLGrids();
+    void initializeCircleVals();
+    void freeCircleVals();
 public:
     NTPClient *timeClient;
     Counter *counter;
