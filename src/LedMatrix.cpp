@@ -176,7 +176,14 @@ void setupEEPROM() {
   mode = EEPROM.read(0);
 
   if (mode == 40) {
+#ifdef ESP32
     counter->counter = EEPROM.readUShort(1);
+#else
+    // ESP8266: manually read 2 bytes for uint16_t
+    uint8_t lowByte = EEPROM.read(1);
+    uint8_t highByte = EEPROM.read(2);
+    counter->counter = (highByte << 8) | lowByte;
+#endif
   }
 }
 
@@ -403,7 +410,10 @@ void displayPicture() {
     yield();
     for (int y = 0; y < matrix_height; y++)
     {
-      display->drawPixelRGB888(x,y, incomingPacket[i++], incomingPacket[i++], incomingPacket[i++]);
+      uint8_t r = incomingPacket[i++];
+      uint8_t g = incomingPacket[i++];
+      uint8_t b = incomingPacket[i++];
+      display->drawPixelRGB888(x, y, r, g, b);
     }
     
   }
@@ -414,7 +424,13 @@ void doCounter(uint16_t counterValue) {
   counter->counter = counterValue;
   mode = 40;
   EEPROM.write(0, mode);
+#ifdef ESP32
   EEPROM.writeUInt(1, counterValue);
+#else
+  // ESP8266: manually write 2 bytes for uint16_t
+  EEPROM.write(1, counterValue & 0xFF);         // low byte
+  EEPROM.write(2, (counterValue >> 8) & 0xFF);  // high byte
+#endif
   EEPROM.commit();
 }
 

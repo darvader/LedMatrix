@@ -4,7 +4,7 @@
 #include <TimeLedMatrix.h>
 
 #ifdef ESP8266
-Counter::Counter(PxMATRIX *display)
+Counter::Counter(PxMATRIX *display, NTPClient *timeClient)
 #define TEXTSIZE 2
 #endif
 #ifdef ESP32
