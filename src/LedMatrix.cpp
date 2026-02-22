@@ -9,7 +9,6 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 #include <cstring>
-#include <WifiUpdate.h>
 #include <NTPClient.h>
 // #include <FFTLed.h>
 #include <scoreboard.h>
@@ -20,6 +19,7 @@
 #include <Counter.h>
 #include <fauxmoESP.h>
 #include <EEPROM.h>
+#include "ManualWifiSetup.h"
 
 
 // Pins for LED MATRIX
@@ -146,6 +146,9 @@ const int ESP_BUILTIN_LED = 2;
 char scrollingText[100] = "VSV Jena 90 e.V. : Gastmannschaft";
 
 
+ManualWifiSetup* wifiSetup;
+bool inSetupMode = false;
+
 WiFiUDP Udp;
 WiFiUDP UdpNtp;
 
@@ -171,7 +174,7 @@ void displayOff();
 void myDelay(ulong millisecs);
 
 void setupEEPROM() {
-  EEPROM.begin(8);
+  EEPROM.begin(200);
 
   mode = EEPROM.read(0);
 
@@ -351,7 +354,16 @@ void setup() {
   display->setTextWrap(false);
 
   ArduinoOTA.setHostname("LedMatrix4x4");
-  setupWifiUpdate();
+  wifiSetup = new ManualWifiSetup(display);
+  if (!wifiSetup->isConfigured()) {
+    inSetupMode = true;
+    wifiSetup->startSetup();
+  } else {
+    if (!wifiSetup->connectToWifi()) {
+      inSetupMode = true;
+      wifiSetup->startSetup();
+    }
+  }
   setupFauxmo();
   setupUdp();
   timeClient.begin();
@@ -648,11 +660,20 @@ void myDelay(ulong millisecs) {
     yield();
     fauxmo.handle();
     ArduinoOTA.handle();
+    if (inSetupMode) wifiSetup->handleClient();
     receiveUdp();
   }
 }
 
 void loop() {
+  if (inSetupMode) {
+    display->clearScreen();
+    scoreboard->showScrollingText();
+    display->flipDMABuffer();
+    wifiSetup->handleClient();
+    myDelay(10);
+    return;
+  }
   if (!off) {
     switch (mode)
     {
