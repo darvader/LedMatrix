@@ -1,7 +1,13 @@
 #include "ManualWifiSetup.h"
 #include <functional>
 
-ManualWifiSetup::ManualWifiSetup(VirtualMatrixPanel* disp) : display(disp), server(80) {
+ManualWifiSetup::ManualWifiSetup(
+#ifdef ESP8266
+    PxMATRIX* disp
+#else
+    VirtualMatrixPanel* disp
+#endif
+) : display(disp), server(80) {
 }
 
 bool ManualWifiSetup::isConfigured() {

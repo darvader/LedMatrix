@@ -668,9 +668,15 @@ void myDelay(ulong millisecs) {
 
 void loop() {
   if (inSetupMode) {
+#ifdef ESP32
     display->clearScreen();
     scoreboard->showScrollingText();
     display->flipDMABuffer();
+#else
+    clear();
+    scoreboard->showScrollingText();
+    showBuffer();
+#endif
     wifiSetup->handleClient();
     myDelay(10);
     return;

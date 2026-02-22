@@ -79,7 +79,29 @@ The project uses the following libraries:
 - **[Adafruit GFX Library](https://github.com/adafruit/Adafruit-GFX-Library)**: Graphics library for displays
 
 ## Time & Utilities
-- **[Timezone](https://github.com/JChristensen/Timezone)**: Timezone handling library 
+- **[Timezone](https://github.com/JChristensen/Timezone)**: Timezone handling library
+
+# Releases & Flashing
+
+## Creating a Release
+See the [release/README.md](release/README.md) for detailed instructions on building and packaging firmware releases.
+
+For quick builds, use the provided scripts:
+- **Windows**: `build_release.bat`
+- **Linux/Mac**: `chmod +x build_release.sh && ./build_release.sh`
+
+## Flashing to ESP32 (NodeMCU-32S)
+1. Connect your ESP32 board via USB
+2. Use PlatformIO: `pio run --target upload --environment nodemcu-32s`
+3. Or use esptool.py: `esptool.py --chip esp32 --port COM3 --baud 921600 write_flash -z --flash_mode dio --flash_freq 40m --flash_size detect 0x10000 firmware.bin`
+
+## Flashing to ESP8266 (NodeMCU v2)
+1. Connect your ESP8266 board via USB
+2. Put ESP8266 in flash mode (GPIO0 to GND)
+3. Use PlatformIO: `pio run --target upload --environment nodemcuv2`
+4. Or use esptool.py: `esptool.py --chip esp8266 --port COM3 --baud 921600 write_flash --flash_mode dio --flash_size 4MB 0x00000 firmware.bin`
+
+For detailed flashing instructions and troubleshooting, see [release/README.md](release/README.md).
 
 # 
 
