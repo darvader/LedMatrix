@@ -353,6 +353,8 @@ void setup() {
   Serial.println(F("finished"));
   display->setTextWrap(false);
 
+  setupEEPROM();
+
   ArduinoOTA.setHostname("LedMatrix4x4");
   wifiSetup = new ManualWifiSetup(display);
   if (!wifiSetup->isConfigured()) {
@@ -372,7 +374,6 @@ void setup() {
   timeSample = new TimeSample(display, &timeClient, counter);
   mandel = new Mandel(display);
   timer = new Timer(display);
-  setupEEPROM();
   logMemory();
 
 }

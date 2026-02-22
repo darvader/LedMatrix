@@ -17,6 +17,17 @@ void ManualWifiSetup::startSetup() {
     Serial.print("AP IP address: ");
     Serial.println(IP);
 
+    // Scan for networks
+    Serial.println("Scanning for WiFi networks...");
+    numScannedSSIDs = WiFi.scanNetworks();
+    Serial.print("Found ");
+    Serial.print(numScannedSSIDs);
+    Serial.println(" networks");
+    for (int i = 0; i < numScannedSSIDs && i < 20; i++) {
+        scannedSSIDs[i] = WiFi.SSID(i);
+        Serial.println(scannedSSIDs[i]);
+    }
+
     // Setup web server
     server.on("/", HTTP_GET, std::bind(&ManualWifiSetup::handleRoot, this));
     server.on("/save", HTTP_POST, std::bind(&ManualWifiSetup::handleSave, this));
@@ -85,23 +96,32 @@ void ManualWifiSetup::handleRoot() {
 }
 
 void ManualWifiSetup::handleSave() {
-    if (server.hasArg("ssid") && server.hasArg("password")) {
-        String ssid = server.arg("ssid");
-        String password = server.arg("password");
-        saveCredentials(ssid, password);
-        server.send(200, "text/html", "<h1>Credentials saved! Rebooting...</h1>");
-        delay(2000);
-        ESP.restart();
+    String ssid;
+    if (server.hasArg("ssid") && server.arg("ssid").length() > 0) {
+        ssid = server.arg("ssid");
+    } else if (server.hasArg("manual_ssid") && server.arg("manual_ssid").length() > 0) {
+        ssid = server.arg("manual_ssid");
     } else {
-        server.send(400, "text/html", "<h1>Error: Missing SSID or Password</h1>");
+        server.send(400, "text/html", "<h1>Error: No SSID provided</h1>");
+        return;
     }
+    String password = server.arg("password");
+    saveCredentials(ssid, password);
+    server.send(200, "text/html", "<h1>Credentials saved! Rebooting...</h1>");
+    delay(2000);
+    ESP.restart();
 }
 
 String ManualWifiSetup::generateHTML() {
     String html = "<!DOCTYPE html><html><head><title>WiFi Setup</title></head><body>";
     html += "<h1>LedMatrix WiFi Setup</h1>";
     html += "<form action='/save' method='POST'>";
-    html += "SSID: <input type='text' name='ssid' required><br>";
+    html += "WiFi Network: <select name='ssid'>";
+    for (int i = 0; i < numScannedSSIDs; i++) {
+        html += "<option value='" + scannedSSIDs[i] + "'>" + scannedSSIDs[i] + "</option>";
+    }
+    html += "</select><br>";
+    html += "Or enter manually: <input type='text' name='manual_ssid' placeholder='SSID'><br>";
     html += "Password: <input type='password' name='password'><br>";
     html += "<input type='submit' value='Save'>";
     html += "</form>";

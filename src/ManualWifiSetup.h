@@ -29,6 +29,8 @@ private:
     const int eepromPassAddr = 35; // Assuming SSID max 32 chars
     const int maxSSIDLen = 32;
     const int maxPassLen = 64;
+    String scannedSSIDs[20];
+    int numScannedSSIDs;
 
     void handleRoot();
     void handleSave();
