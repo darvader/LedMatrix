@@ -5,24 +5,17 @@
 
 void Scoreboard::showScrollingText() {
   static float textX = 0;
-  static unsigned long lastTime = micros();
   display->setTextColor(myGREEN);
 #ifdef ESP32
-  static float speed = 0.0407f/1000.0f;
   display->setTextSize(2);
   display->setCursor(matrix_width + 1 - textX, matrix_height-16);
   int size = display->print(scrollingText)*12 + matrix_width;
 #else
-  static float speed = 0.0407f/2000.0f;
   display->setTextSize(1);
   display->setCursor(matrix_width + 1 - textX, matrix_height-7);
   int size = display->print(scrollingText)*6 + matrix_width;
 #endif
-  unsigned long elapsedTime = micros() - lastTime;
-  if (elapsedTime>0)
-    textX+=elapsedTime*speed;
-  lastTime = micros();
-
+  textX += 1.0f; // Move 1 pixel per frame
   if (textX > size) {
     textX = 0;
   }
