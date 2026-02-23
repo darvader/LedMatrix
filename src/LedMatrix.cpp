@@ -686,7 +686,7 @@ void loop() {
     {
     case 1:
       scoreboard->show();
-      myDelay(2);
+      myDelay(20);
       break;
     case 2:
       timeSample->timeSample1();
@@ -694,15 +694,15 @@ void loop() {
       break;
     case 3:
       timeSample->timeSample2();
-      myDelay(1);
+      myDelay(20);
       break;
     case 4:
       timeSample->timeSample3();
-      myDelay(1);
+      myDelay(20);
       break;
     case 5:
       timeSample->timeSample4();
-      myDelay(1);
+      myDelay(20);
       break;
     case 6:
       timeSample->timeSnow(false);
@@ -710,7 +710,7 @@ void loop() {
       break;
     case 7:
       timeSample->timePlasma();
-      myDelay(1);
+      myDelay(20);
       break;
     case 8:
       timeSample->timeSnow(true);
@@ -722,7 +722,7 @@ void loop() {
       break;
     case 11:
       timeSample->timeEllipse();
-      myDelay(1);
+      myDelay(20);
       break;
     case 12:
       timeSample->timeStarWars();
@@ -730,22 +730,22 @@ void loop() {
       break;
     case 60:
       mandel->mandelbrot();
-      myDelay(1);
+      myDelay(20);
       break;
     case 30:
       timer->show();
-      myDelay(1);
+      myDelay(20);
       break;
     case 40:
       counter->show();
-      myDelay(1);
+      myDelay(20);
       break;
     default:
-      myDelay(1);
+      myDelay(20);
 
       break;
     }
   } else {
-    myDelay(1);
+    myDelay(20);
   }
 }
