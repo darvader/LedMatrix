@@ -62,6 +62,66 @@ The device can display the current time with various animated backgrounds:
 - **Alexa Integration**: Voice control via FauxmoESP (Amazon Echo compatibility)
 
 # Used Libraries
+[//]: # (---)
+
+## Hardware Assembly: 4x HUB75 Matrices with ESP32
+
+To build a large LED display, you can connect four HUB75 RGB LED matrix panels together and control them with an ESP32. Here’s how to assemble and wire the hardware:
+
+### 1. Physical Arrangement
+- **Panels can be arranged in a 2x2 grid (recommended for square displays) or a 1x4 strip (for long displays).**
+- Each panel has an input (IN) and output (OUT) HUB75 connector.
+
+### 2. Daisy-Chaining Panels
+1. Connect the ESP32 to the **IN** connector of the first panel using jumper wires or a HUB75 adapter board.
+2. Use the provided ribbon cable to connect the **OUT** of the first panel to the **IN** of the second panel.
+3. Repeat for the third and fourth panels, chaining OUT to IN.
+4. The data flows from the ESP32 through all four panels in sequence.
+
+### 3. ESP32 to HUB75 Pin Connections
+Wire the ESP32 GPIO pins to the HUB75 connector of the first panel as follows (default for ESP32-HUB75-MatrixPanel-DMA):
+
+| HUB75 Pin | ESP32 GPIO | Signal Description |
+|----------|------------|-------------------|
+| R1       | GPIO 25    | Red data (upper)  |
+| G1       | GPIO 26    | Green data (upper)|
+| B1       | GPIO 27    | Blue data (upper) |
+| R2       | GPIO 14    | Red data (lower)  |
+| G2       | GPIO 12    | Green data (lower)|
+| B2       | GPIO 13    | Blue data (lower) |
+| A        | GPIO 23    | Row select A      |
+| B        | GPIO 19    | Row select B      |
+| C        | GPIO 5     | Row select C      |
+| D        | GPIO 17    | Row select D      |
+| E        | GPIO 18    | Row select E (if used) |
+| LAT      | GPIO 4     | Latch             |
+| OE       | GPIO 15    | Output Enable     |
+| CLK      | GPIO 16    | Clock             |
+| GND      | GND        | Ground            |
+
+> **Note:** Pin numbers may vary depending on your configuration. Check your `platformio.ini` and code for the actual mapping.
+
+### 4. Power Supply
+- You can temporarily power a single panel from USB or the ESP32, but you must limit the display content and avoid lighting all pixels at once. For reliable operation and full brightness, always use a dedicated 5V power supply.
+- Use a dedicated 5V, high-current power supply (e.g., 5V 10A or higher for 4 panels).
+- Connect 5V and GND from the power supply directly to the panels’ power terminals.
+- Connect ESP32 GND to the panel GND to ensure a common ground.
+
+### 5. Example Wiring Diagram (Text)
+
+```
+ESP32         Panel 1 IN      Panel 1 OUT   Panel 2 IN ... Panel 4 OUT
+   |  --------> [ HUB75 ] ----> [ HUB75 ] -> [ HUB75 ] ...
+   |--GND----------------------GND (all grounds connected)
+   |--5V-----------------------5V (panels only, not ESP32)
+```
+
+### 6. Additional Tips
+- Double-check all connections before powering up.
+- Panels can draw significant current; use thick wires for power.
+- For more details, see the [ESP32-HUB75-MatrixPanel-DMA documentation](https://github.com/mrcodetastic/ESP32-HUB75-MatrixPanel-DMA).
+
+---
 The project uses the following libraries:
 
 ## Display Libraries
