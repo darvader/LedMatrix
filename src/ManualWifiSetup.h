@@ -16,6 +16,9 @@
 #endif
 #include <EEPROM.h>
 
+#define MAX_WIFI_NETWORKS 5
+#define NETWORK_DATA_SIZE (32 + 64 + 1) // SSID (32) + Password (64) + Active flag (1)
+
 class ManualWifiSetup {
 public:
     ManualWifiSetup(
@@ -32,6 +35,12 @@ public:
     void saveCredentials(String ssid, String password);
     void loadCredentials(String& ssid, String& password);
 
+    // New methods for multiple WiFi networks
+    void saveNetworkCredentials(int index, String ssid, String password, bool active);
+    bool loadNetworkCredentials(int index, String& ssid, String& password, bool& active);
+    int getNetworkCount();
+    bool deleteNetwork(int index);
+
 private:
 #ifdef ESP8266
     PxMATRIX* display;
@@ -44,6 +53,8 @@ private:
     const char* apPassword = ""; // Open AP
     const int eepromSSIDAddr = 3;
     const int eepromPassAddr = 35; // Assuming SSID max 32 chars
+    const int eepromNetworksBaseAddr = 100; // Base address for multiple networks
+    const int eepromNetworkCountAddr = 99; // Address to store network count
     const int maxSSIDLen = 32;
     const int maxPassLen = 64;
     String scannedSSIDs[20];
@@ -51,6 +62,8 @@ private:
 
     void handleRoot();
     void handleSave();
+    void handleAddNetwork();
+    void handleDeleteNetwork();
     String generateHTML();
 };
 

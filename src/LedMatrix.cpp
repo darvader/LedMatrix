@@ -174,7 +174,7 @@ void displayOff();
 void myDelay(ulong millisecs);
 
 void setupEEPROM() {
-  EEPROM.begin(200);
+  EEPROM.begin(600); // Increased for multiple WiFi networks
 
   mode = EEPROM.read(0);
 
