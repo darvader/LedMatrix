@@ -1,38 +1,34 @@
 #include "HomeAssistantMQTT.h"
 #include <functional>
 
-// Mode names for Home Assistant effect list
-const char* modeNames[] = {
-    "Scoreboard",     // 1
-    "Clock 1",        // 2
-    "Clock 2",        // 3
-    "Clock 3",        // 4
-    "Clock 4",        // 5
-    "Snow",           // 6
-    "Plasma",         // 7
-    "Colored Snow",   // 8
-    "Game of Life",   // 9
-    "Ellipse",        // 11
-    "Star Wars",      // 12
-    "Timer",          // 30
-    "Counter",        // 40
-    "Mandelbrot"      // 60
-};
-
-const int modeValues[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 30, 40, 60};
-const int numModes = sizeof(modeValues) / sizeof(modeValues[0]);
-
 HomeAssistantMQTT::HomeAssistantMQTT() : mqttClient(wifiClient) {
-    // Generate unique device ID from MAC address
+}
+
+void HomeAssistantMQTT::setDevice(const char* name, const char* manufacturer, const char* model) {
+    deviceName = name;
+    deviceManufacturer = manufacturer;
+    deviceModel = model;
+}
+
+void HomeAssistantMQTT::setDevicePrefix(const char* prefix) {
+    devicePrefix = prefix;
+}
+
+void HomeAssistantMQTT::setModes(const char** names, const int* values, int count) {
+    modeNames = names;
+    modeValues = values;
+    numModes = count;
+}
+
+void HomeAssistantMQTT::setup() {
+    // Generate unique device ID from MAC address (deferred to setup so WiFi is ready)
     uint8_t mac[6];
     WiFi.macAddress(mac);
     char macStr[13];
     snprintf(macStr, sizeof(macStr), "%02X%02X%02X%02X%02X%02X",
              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-    deviceId = String("ledmatrix_") + macStr;
-}
+    deviceId = String(devicePrefix) + "_" + macStr;
 
-void HomeAssistantMQTT::setup() {
     String host;
     uint16_t port;
     String user, pass;
@@ -101,10 +97,11 @@ bool HomeAssistantMQTT::reconnect() {
         publishSelectDiscovery();
 
         // Subscribe to command topics
-        String cmdTopic = "ledmatrix/" + deviceId + "/light/set";
+        String prefix = String(devicePrefix);
+        String cmdTopic = prefix + "/" + deviceId + "/light/set";
         mqttClient.subscribe(cmdTopic.c_str());
 
-        String modeTopic = "ledmatrix/" + deviceId + "/mode/set";
+        String modeTopic = prefix + "/" + deviceId + "/mode/set";
         mqttClient.subscribe(modeTopic.c_str());
 
         Serial.print("Subscribed to: ");
@@ -119,8 +116,11 @@ bool HomeAssistantMQTT::reconnect() {
 }
 
 void HomeAssistantMQTT::publishDiscovery() {
+    if (numModes == 0 || modeNames == nullptr) return;
+
     // Build discovery topic
     String discoveryTopic = "homeassistant/light/" + deviceId + "/config";
+    String prefix = String(devicePrefix);
 
     // Build effect list JSON array
     String effectList = "[";
@@ -132,19 +132,19 @@ void HomeAssistantMQTT::publishDiscovery() {
 
     // Build discovery payload
     String payload = "{";
-    payload += "\"name\":\"LED Matrix\",";
+    payload += "\"name\":\"" + String(deviceName) + "\",";
     payload += "\"unique_id\":\"" + deviceId + "_light\",";
-    payload += "\"command_topic\":\"ledmatrix/" + deviceId + "/light/set\",";
-    payload += "\"state_topic\":\"ledmatrix/" + deviceId + "/light/state\",";
+    payload += "\"command_topic\":\"" + prefix + "/" + deviceId + "/light/set\",";
+    payload += "\"state_topic\":\"" + prefix + "/" + deviceId + "/light/state\",";
     payload += "\"schema\":\"json\",";
     payload += "\"brightness\":true,";
     payload += "\"effect\":true,";
     payload += "\"effect_list\":" + effectList + ",";
     payload += "\"device\":{";
     payload += "\"identifiers\":[\"" + deviceId + "\"],";
-    payload += "\"name\":\"LED Matrix\",";
-    payload += "\"manufacturer\":\"DIY\",";
-    payload += "\"model\":\"ESP LED Matrix\"";
+    payload += "\"name\":\"" + String(deviceName) + "\",";
+    payload += "\"manufacturer\":\"" + String(deviceManufacturer) + "\",";
+    payload += "\"model\":\"" + String(deviceModel) + "\"";
     payload += "}";
     payload += "}";
 
@@ -153,8 +153,11 @@ void HomeAssistantMQTT::publishDiscovery() {
 }
 
 void HomeAssistantMQTT::publishSelectDiscovery() {
+    if (numModes == 0 || modeNames == nullptr) return;
+
     // Also publish a select entity for direct mode selection
     String discoveryTopic = "homeassistant/select/" + deviceId + "_mode/config";
+    String prefix = String(devicePrefix);
 
     // Build options list
     String options = "[";
@@ -165,10 +168,10 @@ void HomeAssistantMQTT::publishSelectDiscovery() {
     options += "]";
 
     String payload = "{";
-    payload += "\"name\":\"LED Matrix Mode\",";
+    payload += "\"name\":\"" + String(deviceName) + " Mode\",";
     payload += "\"unique_id\":\"" + deviceId + "_mode\",";
-    payload += "\"command_topic\":\"ledmatrix/" + deviceId + "/mode/set\",";
-    payload += "\"state_topic\":\"ledmatrix/" + deviceId + "/mode/state\",";
+    payload += "\"command_topic\":\"" + prefix + "/" + deviceId + "/mode/set\",";
+    payload += "\"state_topic\":\"" + prefix + "/" + deviceId + "/mode/state\",";
     payload += "\"options\":" + options + ",";
     payload += "\"device\":{";
     payload += "\"identifiers\":[\"" + deviceId + "\"]";
@@ -238,11 +241,12 @@ void HomeAssistantMQTT::mqttCallback(char* topic, byte* payload, unsigned int le
     // Handle direct mode selection
     if (topicStr.endsWith("/mode/set")) {
         String modeName = String(message);
+        String prefix = String(devicePrefix);
         for (int i = 0; i < numModes; i++) {
             if (modeName == modeNames[i]) {
                 if (modeCb) modeCb(modeValues[i]);
                 // Publish mode state
-                String stateTopic = "ledmatrix/" + deviceId + "/mode/state";
+                String stateTopic = prefix + "/" + deviceId + "/mode/state";
                 mqttClient.publish(stateTopic.c_str(), modeNames[i], true);
                 break;
             }
@@ -253,7 +257,8 @@ void HomeAssistantMQTT::mqttCallback(char* topic, byte* payload, unsigned int le
 void HomeAssistantMQTT::publishState(bool on, uint8_t brightness, const char* effect) {
     if (!mqttClient.connected()) return;
 
-    String stateTopic = "ledmatrix/" + deviceId + "/light/state";
+    String prefix = String(devicePrefix);
+    String stateTopic = prefix + "/" + deviceId + "/light/state";
 
     String payload = "{";
     payload += "\"state\":\"" + String(on ? "ON" : "OFF") + "\",";
@@ -267,7 +272,7 @@ void HomeAssistantMQTT::publishState(bool on, uint8_t brightness, const char* ef
 
     // Also publish mode state
     if (effect && strlen(effect) > 0) {
-        String modeTopic = "ledmatrix/" + deviceId + "/mode/state";
+        String modeTopic = prefix + "/" + deviceId + "/mode/state";
         mqttClient.publish(modeTopic.c_str(), effect, true);
     }
 }

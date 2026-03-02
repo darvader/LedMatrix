@@ -20,7 +20,7 @@
 #include <fauxmoESP.h>
 #include <EEPROM.h>
 #include "ManualWifiSetup.h"
-#include "HomeAssistantMQTT.h"
+#include <HomeAssistantMQTT.h>
 
 
 // Pins for LED MATRIX
@@ -260,19 +260,20 @@ void setupFauxmo() {
   });
 }
 
+// Mode names and values for Home Assistant integration
+const char* haModeNames[] = {
+    "Scoreboard", "Clock 1", "Clock 2", "Clock 3", "Clock 4",
+    "Snow", "Plasma", "Colored Snow", "Game of Life",
+    "Ellipse", "Star Wars", "Timer", "Counter", "Mandelbrot"
+};
+const int haModeValues[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 30, 40, 60};
+const int haNumModes = sizeof(haModeValues) / sizeof(haModeValues[0]);
+
 // Helper function to get the current mode name
 const char* getModeNameById(int modeId) {
-  // Mode IDs and names mapping to match HomeAssistantMQTT.cpp
-  const int modeIds[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 30, 40, 60};
-  const char* modeNames[] = {
-      "Scoreboard", "Clock 1", "Clock 2", "Clock 3", "Clock 4",
-      "Snow", "Plasma", "Colored Snow", "Game of Life",
-      "Ellipse", "Star Wars", "Timer", "Counter", "Mandelbrot"
-  };
-
-  for (int i = 0; i < 14; i++) {
-    if (modeIds[i] == modeId) {
-      return modeNames[i];
+  for (int i = 0; i < haNumModes; i++) {
+    if (haModeValues[i] == modeId) {
+      return haModeNames[i];
     }
   }
 
@@ -280,15 +281,15 @@ const char* getModeNameById(int modeId) {
 }
 
 void setupHomeAssistant() {
+  // Configure device info and modes
+  homeAssistant.setDevice("LED Matrix", "DIY", "ESP LED Matrix");
+  homeAssistant.setDevicePrefix("ledmatrix");
+  homeAssistant.setModes(haModeNames, haModeValues, haNumModes);
+
   // Set up callbacks
   homeAssistant.onState(haStateCallback);
   homeAssistant.onBrightness(haBrightnessCallback);
   homeAssistant.onMode(haModeCallback);
-
-  // Set MQTT server directly if needed
-  // Uncomment and replace with your MQTT server details:
-  // homeAssistant.setBroker("192.168.1.100", 1883); // MQTT server IP/hostname and port
-  // homeAssistant.setCredentials("username", "password"); // Optional credentials
 
   // Initialize the MQTT client
   homeAssistant.setup();

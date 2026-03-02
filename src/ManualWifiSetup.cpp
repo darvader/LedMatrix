@@ -37,7 +37,7 @@ void ManualWifiSetup::startSetup() {
     server.on("/save", HTTP_POST, std::bind(&ManualWifiSetup::handleSave, this));
     server.on("/add", HTTP_POST, std::bind(&ManualWifiSetup::handleAddNetwork, this));
     server.on("/delete", HTTP_POST, std::bind(&ManualWifiSetup::handleDeleteNetwork, this));
-    server.on("/savemqtt", HTTP_POST, std::bind(&ManualWifiSetup::handleSaveMQTT, this));
+    mqttConfig.attachToServer(server);
     server.begin();
 
     // Set scrolling text
@@ -47,8 +47,9 @@ void ManualWifiSetup::startSetup() {
 
 void ManualWifiSetup::startConfigServer() {
     configMode = true;
+    mqttConfig.setConfigMode(true);
     server.on("/", HTTP_GET, std::bind(&ManualWifiSetup::handleRoot, this));
-    server.on("/savemqtt", HTTP_POST, std::bind(&ManualWifiSetup::handleSaveMQTT, this));
+    mqttConfig.attachToServer(server);
     server.begin();
     Serial.println("Config server started on port 8080");
 }
@@ -232,39 +233,6 @@ void ManualWifiSetup::handleDeleteNetwork() {
     }
 }
 
-void ManualWifiSetup::handleSaveMQTT() {
-    String mqttHost = server.arg("mqtt_host");
-    String mqttPortStr = server.arg("mqtt_port");
-    String mqttUser = server.arg("mqtt_user");
-    String mqttPass = server.arg("mqtt_pass");
-
-    if (mqttHost.length() == 0) {
-        server.send(400, "text/html", "<h1>Error: MQTT host required</h1><a href='/'>Back</a>");
-        return;
-    }
-
-    uint16_t mqttPort = mqttPortStr.length() > 0 ? mqttPortStr.toInt() : 1883;
-    if (mqttPort == 0) mqttPort = 1883;
-
-    HomeAssistantMQTT ha;
-    ha.saveMQTTConfig(mqttHost, mqttPort, mqttUser, mqttPass);
-
-    if (configMode) {
-        mqttReconnectNeeded = true;
-        String html = "<!DOCTYPE html><html><head><title>MQTT Saved</title>";
-        html += "<style>body{font-family:sans-serif;margin:20px;}</style></head><body>";
-        html += "<h1>MQTT configuration saved!</h1>";
-        html += "<p>The MQTT connection will be re-established shortly.</p>";
-        html += "<a href='/'>Back to configuration</a>";
-        html += "</body></html>";
-        server.send(200, "text/html", html);
-    } else {
-        server.send(200, "text/html", "<h1>MQTT configuration saved! Rebooting...</h1>");
-        delay(2000);
-        ESP.restart();
-    }
-}
-
 String ManualWifiSetup::generateHTML() {
     String html = "<!DOCTYPE html><html><head>";
     html += "<title>" + String(configMode ? "MQTT Configuration" : "WiFi Setup") + "</title>";
@@ -330,37 +298,8 @@ String ManualWifiSetup::generateHTML() {
         }
     }
 
-    // MQTT Configuration section (always shown)
-    html += "<h2>Home Assistant MQTT Configuration</h2>";
-
-    // Check if MQTT is already configured
-    HomeAssistantMQTT ha;
-    String mqttHost;
-    uint16_t mqttPort;
-    String mqttUser, mqttPass;
-    bool mqttConfigured = ha.loadMQTTConfig(mqttHost, mqttPort, mqttUser, mqttPass);
-
-    if (mqttConfigured) {
-        html += "<p><strong>Current MQTT Broker:</strong> " + mqttHost + ":" + String(mqttPort);
-        if (mqttUser.length() > 0) {
-            html += " (User: " + mqttUser + ")";
-        }
-        html += "</p>";
-    }
-
-    html += "<form action='/savemqtt' method='POST'>";
-    html += "MQTT Broker Host/IP: <input type='text' name='mqtt_host' value='" +
-            (mqttConfigured ? mqttHost : "") + "' placeholder='192.168.1.100' required><br>";
-    html += "MQTT Port: <input type='number' name='mqtt_port' value='" +
-            String(mqttConfigured ? mqttPort : 1883) + "' placeholder='1883'><br>";
-    html += "MQTT Username: <input type='text' name='mqtt_user' value='" +
-            (mqttConfigured ? mqttUser : "") + "' placeholder='(optional)'><br>";
-    html += "MQTT Password: <input type='password' name='mqtt_pass' placeholder='(optional)'><br>";
-    html += "<input type='submit' value='Save MQTT Config' class='btn btn-add'>";
-    html += "</form>";
-
-    html += "<p><small><strong>Note:</strong> Configure your Home Assistant MQTT broker first. ";
-    html += "The LED Matrix will appear as a 'Light' entity with multiple effects/modes.</small></p>";
+    // MQTT Configuration section (delegated to HAMQTTConfig)
+    html += mqttConfig.generateMQTTHTML();
 
     html += "</body></html>";
     return html;

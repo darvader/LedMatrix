@@ -15,7 +15,7 @@
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 #endif
 #include <EEPROM.h>
-#include "HomeAssistantMQTT.h"
+#include <HAMQTTConfig.h>
 
 #define MAX_WIFI_NETWORKS 5
 #define NETWORK_DATA_SIZE (32 + 64 + 1) // SSID (32) + Password (64) + Active flag (1)
@@ -43,9 +43,9 @@ public:
     int getNetworkCount();
     bool deleteNetwork(int index);
 
-    // MQTT reconnect flag
-    bool isMqttReconnectNeeded() const { return mqttReconnectNeeded; }
-    void clearMqttReconnectFlag() { mqttReconnectNeeded = false; }
+    // MQTT reconnect flag (delegated to HAMQTTConfig)
+    bool isMqttReconnectNeeded() const { return mqttConfig.isMqttReconnectNeeded(); }
+    void clearMqttReconnectFlag() { mqttConfig.clearMqttReconnectFlag(); }
 
 private:
 #ifdef ESP8266
@@ -55,6 +55,7 @@ private:
     VirtualMatrixPanel* display;
     WebServer server;
 #endif
+    HAMQTTConfig mqttConfig;
     const char* apSSID = "LedMatrix-Setup";
     const char* apPassword = ""; // Open AP
     const int eepromSSIDAddr = 3;
@@ -66,13 +67,11 @@ private:
     String scannedSSIDs[20];
     int numScannedSSIDs;
     bool configMode = false; // false = setup mode (AP), true = config mode (station)
-    bool mqttReconnectNeeded = false;
 
     void handleRoot();
     void handleSave();
     void handleAddNetwork();
     void handleDeleteNetwork();
-    void handleSaveMQTT();
     String generateHTML();
 };
 

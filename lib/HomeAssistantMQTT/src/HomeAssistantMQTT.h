@@ -14,12 +14,17 @@
 
 class HomeAssistantMQTT {
 public:
-    // Callback types for controlling the LED Matrix
+    // Callback types for controlling the device
     typedef void (*StateCallback)(bool on);
     typedef void (*BrightnessCallback)(uint8_t brightness);
     typedef void (*ModeCallback)(int mode);
 
     HomeAssistantMQTT();
+
+    // Device configuration (call before setup())
+    void setDevice(const char* name, const char* manufacturer, const char* model);
+    void setDevicePrefix(const char* prefix);
+    void setModes(const char** names, const int* values, int count);
 
     void setup();
     void loop();
@@ -65,6 +70,17 @@ private:
     unsigned long lastReconnectAttempt = 0;
 
     String deviceId;
+
+    // Configurable device info
+    const char* deviceName = "LED Matrix";
+    const char* deviceManufacturer = "DIY";
+    const char* deviceModel = "ESP LED Matrix";
+    const char* devicePrefix = "ledmatrix";
+
+    // Configurable modes
+    const char** modeNames = nullptr;
+    const int* modeValues = nullptr;
+    int numModes = 0;
 
     void mqttCallback(char* topic, byte* payload, unsigned int length);
     bool reconnect();
