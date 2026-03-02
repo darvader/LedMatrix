@@ -121,6 +121,7 @@ int countDigits(int num) {
 }
 
 void Counter::show() {
+    showBuffer();
     clear();
     drawRunners();
     display->setTextSize(TEXTSIZE);
@@ -128,5 +129,4 @@ void Counter::show() {
     display->setCursor(13,4);
     display->printf("%04u", this->counter);
     drawTime();
-    showBuffer();
 }

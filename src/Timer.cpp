@@ -42,6 +42,7 @@ void Timer::pause() {
 void Timer::showTimer() {
     static long blinkingStart = 0;
 
+    showBuffer();
     clear();
     display->setTextSize(TEXTSIZE);
     uint32_t c32 = Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::ColorHSV(65536 - 65536L*3/4*elapsed/timer));
@@ -70,10 +71,10 @@ void Timer::showTimer() {
         }
     }
     display->printf("%05.1f", elapsed);
-    showBuffer();
 }
 
 void Timer::showStopWatch() {
+    showBuffer();
     clear();
     display->setTextSize(TEXTSIZE);
     uint32_t c32 = Adafruit_NeoPixel::gamma32(Adafruit_NeoPixel::ColorHSV(65536 * elapsed / 30));
@@ -87,7 +88,6 @@ void Timer::showStopWatch() {
     }
 
     display->printf("%05.1f", elapsed);
-    showBuffer();
 }
 
 void Timer::show() {

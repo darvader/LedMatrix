@@ -294,11 +294,20 @@ void setupHomeAssistant() {
   homeAssistant.setup();
 }
 
+// These free functions mirror BaseLedMatrix::showBuffer()/clear() for use in LedMatrix.cpp
 inline void showBuffer() {
   #ifdef ESP8266
     display->showBuffer();
-  #else
+  #endif
+  #ifdef ESP32
+    // Correct double-buffer pattern per HUB75 library examples:
+    // flip → delay (wait one refresh cycle) → caller must then call clear() → draw
     display->flipDMABuffer();
+    if (dma_display->calculated_refresh_rate > 0) {
+      delay(1000 / dma_display->calculated_refresh_rate);
+    } else {
+      delay(20);
+    }
   #endif
 }
 
@@ -437,6 +446,15 @@ void setup() {
   timeSample = new TimeSample(display, &timeClient, counter);
   mandel = new Mandel(display);
   timer = new Timer(display);
+
+#ifdef ESP32
+  // Set DMA display pointer for all BaseLedMatrix subclasses to enable proper double-buffering
+  scoreboard->setDMADisplay(dma_display);
+  counter->setDMADisplay(dma_display);
+  timeSample->setDMADisplay(dma_display);
+  mandel->setDMADisplay(dma_display);
+  timer->setDMADisplay(dma_display);
+#endif
   logMemory();
 
 }
@@ -455,7 +473,6 @@ void detect() {
   Udp.write(replyPacket, sizeof(replyPacket));
   Udp.endPacket();
   Serial.println(F("Detect received."));
-  clear();
   showBuffer();
   clear();
   for(int i = 0; i < matrix_width; i+=2) {
@@ -466,18 +483,16 @@ void detect() {
     display->print("Detect");
     delay(10);
     showBuffer();
+    clear();
   }
-  clear();
   showBuffer();
   clear();
 }
 
 void displayOff() {
   off = true;
-  clear();
   showBuffer();
   clear();
-  showBuffer();
 }
 
 void displayPicture() {
@@ -739,15 +754,9 @@ void myDelay(ulong millisecs) {
 
 void loop() {
   if (inSetupMode) {
-#ifdef ESP32
-    display->clearScreen();
-    scoreboard->showScrollingText();
-    display->flipDMABuffer();
-#else
+    showBuffer();
     clear();
     scoreboard->showScrollingText();
-    showBuffer();
-#endif
     wifiSetup->handleClient();
     myDelay(10);
     return;
@@ -757,7 +766,7 @@ void loop() {
     {
     case 1:
       scoreboard->show();
-      myDelay(20);
+      myDelay(1);
       break;
     case 2:
       timeSample->timeSample1();
@@ -793,7 +802,7 @@ void loop() {
       break;
     case 11:
       timeSample->timeEllipse();
-      myDelay(20);
+      myDelay(1);
       break;
     case 12:
       timeSample->timeStarWars();

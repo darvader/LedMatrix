@@ -118,12 +118,13 @@ void Scoreboard::updateScrollingText() {
 }
 
 void Scoreboard::show() {
-  clear();
+  showBuffer(); // flip + delay
+  clear();      // clear back buffer
   showScore();
-  if (timeoutOn) 
+  if (timeoutOn)
     timeOut();
   else
     showScrollingText();
   showTime();
-  showBuffer();
+  // Next showBuffer() will be called in the next frame cycle
 }

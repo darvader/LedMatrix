@@ -197,8 +197,8 @@ void TimeSample::timeSample1() {
   if (y == height) stepY = -1;
   if (y == 0) stepY = 1;
 
+  showBuffer();
   clear();
-  
 
   display->drawLine(x, 0, width-x, height, myRED);
   display->drawLine(width-x, 0, x, height, myBLUE);
@@ -209,17 +209,16 @@ void TimeSample::timeSample1() {
 
   x += stepX;
   y += stepY;
-  showBuffer();
 
   // delay(30);
 }
 
 void TimeSample::timeSample2() {
-  static const int size = 10; 
+  static const int size = 10;
   static line_t lines[size];
   static boolean initialized = false;
-  static const byte width = matrix_width/2; 
-  static const byte height = matrix_height/2; 
+  static const byte width = matrix_width/2;
+  static const byte height = matrix_height/2;
   static byte radius = width+5;
 
   if (!initialized) {
@@ -235,6 +234,7 @@ void TimeSample::timeSample2() {
     initialized = true;
   }
 
+  showBuffer();
   clear();
 
   for (int i = 0; i<size; i++) {
@@ -251,8 +251,6 @@ void TimeSample::timeSample2() {
     lines[i].y2 = cos(arc + PI) * radius + height;
   }
   drawTimeWithBackground();
-
-  showBuffer();
 }
 
 void TimeSample::timeSample3() {
@@ -283,6 +281,7 @@ void TimeSample::timeSample3() {
     initialized = true;
   }
 
+  showBuffer();
   clear();
 
   for (int i = 0; i<size; i++) {
@@ -300,8 +299,6 @@ void TimeSample::timeSample3() {
     lines[i].y2 = yVals[step2];
   }
   drawTimeWithBackground();
-
-  showBuffer();
 }
 
 void TimeSample::timeSample4() {
@@ -336,6 +333,7 @@ void TimeSample::timeSample4() {
     initialized = true;
   }
 
+  showBuffer();
   clear();
 
   for (int i = 0; i<size; i++) {
@@ -353,18 +351,15 @@ void TimeSample::timeSample4() {
     lines[i].y2 = yVals[step2];
   }
   drawTimeWithBackground();
-
-  showBuffer();
 }
 
 
 
   void TimeSample::timeEllipse() {
+    showBuffer();
     clear();
     counter->drawRunners();
     drawTime();
-
-    showBuffer();
   }
 
   void TimeSample::timePlasma()
@@ -377,10 +372,9 @@ void TimeSample::timeSample4() {
     static CRGBPalette16 palettes[] = {HeatColors_p, LavaColors_p, RainbowColors_p, RainbowStripeColors_p, CloudColors_p};
     static CRGBPalette16 currentPalette = palettes[0];
 
+    showBuffer();
+    clear();
     timeClient->update();
-
-    // clear();
-
 
     for (int x = 0; x < PANE_WIDTH; x++)
     {
@@ -420,8 +414,6 @@ void TimeSample::timeSample4() {
       fps = 0;
     }
     drawTimeWithBackground();
-
-    showBuffer();
   }
 
 
@@ -441,8 +433,9 @@ void TimeSample::timeSnow(bool colored) {
 
   snow_t* smallSnows = (snow_t*)snowParticles;
 
-  timeClient->update();
+  showBuffer();
   clear();
+  timeClient->update();
 
   for (int i = 0; i < numSmallSnows; i++) {
       snow_t* sn = &smallSnows[i];
@@ -456,14 +449,13 @@ void TimeSample::timeSnow(bool colored) {
     }
     sn->y += sn->speed;
     if (sn->y > height) {
-      sn->x = random(width); 
+      sn->x = random(width);
       sn->y = 0;
       sn->speed = random(3,10)/10.0f;
     }
   }
 
   drawTime();
-  showBuffer();
 }
 
 int TimeSample::countAliveNeighbors(uint8_t  x, uint8_t  y) {
@@ -514,6 +506,7 @@ void TimeSample::timeGameOfLife() {
     initializedGOL = true;
   }
 
+  showBuffer();
   clear();
   
   int changes = 0;
@@ -616,8 +609,6 @@ void TimeSample::timeGameOfLife() {
   }
 
   drawTimeWithBackground();
-
-  showBuffer();
 }
 
 void TimeSample::timeStarWars() {
@@ -649,6 +640,7 @@ void TimeSample::timeStarWars() {
 
   if (stars == nullptr) return;  // Safety check
 
+  showBuffer();
   clear();
 
   // Update and draw stars
@@ -709,6 +701,5 @@ void TimeSample::timeStarWars() {
   }
 
   drawTimeWithBackground();
-  showBuffer();
 }
 

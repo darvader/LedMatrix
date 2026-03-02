@@ -31,6 +31,9 @@ void Mandel::mandelbrot() {
   static float zoomDuration = 60000;  // 1 minute
   static float targetZoom = 10.0;  // Target zoom level after 1 minute
 
+  showBuffer();
+  clear();
+
   float zoomProgress = (millis() - zoomStartTime) / zoomDuration;
   if ((millis() - zoomStartTime)>zoomDuration) zoomStartTime = millis();
   if (zoomProgress > 1.0) zoomProgress = 1.0;
@@ -57,24 +60,23 @@ void Mandel::mandelbrot() {
       x = 0.0;
       y = 0.0;
       iteration = 0;
-      
+
       while ((x*x + y*y <= 4) && (iteration < max_iteration)) {
         xx = x*x - y*y + cr;
         y = 2.0*x*y + ci;
         x = xx;
         iteration++;
-      } 
-      
+      }
+
       if (iteration >= max_iteration) {
         // Inside the Mandelbrot set, color it black
         color = myBLACK;
       } else {
         // Outside the Mandelbrot set, color it with a gradient based on the number of iterations
-        color = display->color565(iteration % 256, iteration % 128, iteration % 64); 
+        color = display->color565(iteration % 256, iteration % 128, iteration % 64);
       }
-      
+
       display->drawPixel(hx, hy, color);
     }
   }
-  showBuffer();
 } 
