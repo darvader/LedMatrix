@@ -1,7 +1,18 @@
 {
   "permissions": {
     "allow": [
-      "Bash(/c/Users/fiedl/.platformio/penv/Scripts/python.exe:*)"
+      "Bash(/c/Users/fiedl/.platformio/penv/Scripts/python.exe:*)",
+      "WebSearch",
+      "WebFetch(domain:www.home-assistant.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.platformio.org)",
+      "WebFetch(domain:platformio.org)",
+      "WebFetch(domain:registry.platformio.org)",
+      "WebFetch(domain:randomnerdtutorials.com)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:tasmota.github.io)",
+      "WebFetch(domain:mqtt.org)",
+      "Bash(~/.platformio/penv/Scripts/pio.exe run:*)"
     ]
   }
 }

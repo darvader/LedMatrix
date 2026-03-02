@@ -15,6 +15,7 @@
 #include <ESP32-VirtualMatrixPanel-I2S-DMA.h>
 #endif
 #include <EEPROM.h>
+#include "HomeAssistantMQTT.h"
 
 #define MAX_WIFI_NETWORKS 5
 #define NETWORK_DATA_SIZE (32 + 64 + 1) // SSID (32) + Password (64) + Active flag (1)
@@ -64,6 +65,7 @@ private:
     void handleSave();
     void handleAddNetwork();
     void handleDeleteNetwork();
+    void handleSaveMQTT();
     String generateHTML();
 };
 

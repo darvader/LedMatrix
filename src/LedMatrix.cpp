@@ -20,6 +20,7 @@
 #include <fauxmoESP.h>
 #include <EEPROM.h>
 #include "ManualWifiSetup.h"
+#include "HomeAssistantMQTT.h"
 
 
 // Pins for LED MATRIX
@@ -160,12 +161,14 @@ char incomingPacket[255];
 IPAddress masterIp;
 int mode = 12;
 int previousMode = 12;
+unsigned long lastHAStateUpdate = 0;
 Scoreboard *scoreboard;
 TimeSample *timeSample;
 Mandel *mandel;
 Timer *timer;
 Counter *counter;
 fauxmoESP fauxmo;
+HomeAssistantMQTT homeAssistant;
 
 void setupUdp();
 void receiveUdp();
@@ -174,7 +177,7 @@ void displayOff();
 void myDelay(ulong millisecs);
 
 void setupEEPROM() {
-  EEPROM.begin(600); // Increased for multiple WiFi networks
+  EEPROM.begin(720); // WiFi networks + MQTT config
 
   mode = EEPROM.read(0);
 
@@ -188,6 +191,26 @@ void setupEEPROM() {
     counter->counter = (highByte << 8) | lowByte;
 #endif
   }
+}
+
+// Home Assistant callbacks implementation
+void haStateCallback(bool on) {
+  if (on) {
+    off = false;
+  } else {
+    displayOff();
+  }
+}
+
+void haBrightnessCallback(uint8_t brightness) {
+  display_draw_time = brightness / 255.0 * 60;
+  #ifdef ESP32
+    dma_display->setBrightness8(brightness);
+  #endif
+}
+
+void haModeCallback(int modeNum) {
+  mode = modeNum;
 }
 
 void setupFauxmo() {
@@ -234,6 +257,40 @@ void setupFauxmo() {
       }
 
   });
+}
+
+// Helper function to get the current mode name
+const char* getModeNameById(int modeId) {
+  // Mode IDs and names mapping to match HomeAssistantMQTT.cpp
+  const int modeIds[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 30, 40, 60};
+  const char* modeNames[] = {
+      "Scoreboard", "Clock 1", "Clock 2", "Clock 3", "Clock 4",
+      "Snow", "Plasma", "Colored Snow", "Game of Life",
+      "Ellipse", "Star Wars", "Timer", "Counter", "Mandelbrot"
+  };
+
+  for (int i = 0; i < 14; i++) {
+    if (modeIds[i] == modeId) {
+      return modeNames[i];
+    }
+  }
+
+  return "";
+}
+
+void setupHomeAssistant() {
+  // Set up callbacks
+  homeAssistant.onState(haStateCallback);
+  homeAssistant.onBrightness(haBrightnessCallback);
+  homeAssistant.onMode(haModeCallback);
+
+  // Set MQTT server directly if needed
+  // Uncomment and replace with your MQTT server details:
+  // homeAssistant.setBroker("192.168.1.100", 1883); // MQTT server IP/hostname and port
+  // homeAssistant.setCredentials("username", "password"); // Optional credentials
+
+  // Initialize the MQTT client
+  homeAssistant.setup();
 }
 
 inline void showBuffer() {
@@ -367,6 +424,7 @@ void setup() {
     }
   }
   setupFauxmo();
+  setupHomeAssistant();
   setupUdp();
   timeClient.begin();
   scoreboard = new Scoreboard(&timeClient, display);
@@ -647,6 +705,12 @@ void receiveUdp() {
       timeSample->freeAllResources();
       counter->freeAllResources();
       previousMode = mode;
+
+      // Publish mode change to Home Assistant immediately
+      const char* modeName = getModeNameById(mode);
+      if (strlen(modeName) > 0) {
+        homeAssistant.publishState(!off, display_draw_time, modeName);
+      }
     }
 
     digitalWrite(LED_BUILTIN, LOW);
@@ -660,6 +724,7 @@ void myDelay(ulong millisecs) {
   while (millis() - time < millisecs) {
     yield();
     fauxmo.handle();
+    homeAssistant.loop();
     ArduinoOTA.handle();
     if (inSetupMode) wifiSetup->handleClient();
     receiveUdp();
@@ -747,5 +812,14 @@ void loop() {
     }
   } else {
     myDelay(20);
+  }
+
+  // Publish state to Home Assistant every 30 seconds
+  if (millis() - lastHAStateUpdate > 30000) {
+    lastHAStateUpdate = millis();
+    const char* modeName = getModeNameById(mode);
+    if (strlen(modeName) > 0) {
+      homeAssistant.publishState(!off, display_draw_time, modeName);
+    }
   }
 }
