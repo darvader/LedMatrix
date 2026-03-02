@@ -7,7 +7,7 @@ ManualWifiSetup::ManualWifiSetup(
 #else
     VirtualMatrixPanel* disp
 #endif
-) : display(disp), server(80) {
+, uint16_t port) : display(disp), server(port) {
 }
 
 bool ManualWifiSetup::isConfigured() {
@@ -43,6 +43,14 @@ void ManualWifiSetup::startSetup() {
     // Set scrolling text
     extern char scrollingText[];
     strcpy(scrollingText, "Connect to LedMatrix-Setup and go to 192.168.4.1 to setup WiFi");
+}
+
+void ManualWifiSetup::startConfigServer() {
+    configMode = true;
+    server.on("/", HTTP_GET, std::bind(&ManualWifiSetup::handleRoot, this));
+    server.on("/savemqtt", HTTP_POST, std::bind(&ManualWifiSetup::handleSaveMQTT, this));
+    server.begin();
+    Serial.println("Config server started on port 8080");
 }
 
 void ManualWifiSetup::handleClient() {
@@ -241,13 +249,25 @@ void ManualWifiSetup::handleSaveMQTT() {
     HomeAssistantMQTT ha;
     ha.saveMQTTConfig(mqttHost, mqttPort, mqttUser, mqttPass);
 
-    server.send(200, "text/html", "<h1>MQTT configuration saved! Rebooting...</h1>");
-    delay(2000);
-    ESP.restart();
+    if (configMode) {
+        mqttReconnectNeeded = true;
+        String html = "<!DOCTYPE html><html><head><title>MQTT Saved</title>";
+        html += "<style>body{font-family:sans-serif;margin:20px;}</style></head><body>";
+        html += "<h1>MQTT configuration saved!</h1>";
+        html += "<p>The MQTT connection will be re-established shortly.</p>";
+        html += "<a href='/'>Back to configuration</a>";
+        html += "</body></html>";
+        server.send(200, "text/html", html);
+    } else {
+        server.send(200, "text/html", "<h1>MQTT configuration saved! Rebooting...</h1>");
+        delay(2000);
+        ESP.restart();
+    }
 }
 
 String ManualWifiSetup::generateHTML() {
-    String html = "<!DOCTYPE html><html><head><title>WiFi Setup</title>";
+    String html = "<!DOCTYPE html><html><head>";
+    html += "<title>" + String(configMode ? "MQTT Configuration" : "WiFi Setup") + "</title>";
     html += "<style>";
     html += "body{font-family:sans-serif;margin:20px;}";
     html += "h1{color:#333;}";
@@ -258,46 +278,59 @@ String ManualWifiSetup::generateHTML() {
     html += ".btn{padding:8px 16px;cursor:pointer;margin:2px;}";
     html += ".btn-del{background:#e44;color:white;border:none;border-radius:3px;}";
     html += ".btn-add{background:#4a4;color:white;border:none;border-radius:3px;}";
+    html += ".info{background:#f0f0ff;border-left:4px solid #44e;padding:10px;margin:10px 0;}";
     html += "</style></head><body>";
-    html += "<h1>LedMatrix WiFi Setup</h1>";
 
-    // Show saved networks
-    int count = getNetworkCount();
-    if (count > 0) {
-        html += "<h2>Saved Networks</h2>";
-        html += "<table><tr><th>#</th><th>SSID</th><th>Action</th></tr>";
-        for (int i = 0; i < count; i++) {
-            String ssid, pass;
-            bool active;
-            loadNetworkCredentials(i, ssid, pass, active);
-            html += "<tr><td>" + String(i + 1) + "</td>";
-            html += "<td>" + ssid + (active ? "" : " (disabled)") + "</td>";
-            html += "<td><form action='/delete' method='POST' style='display:inline;'>";
-            html += "<input type='hidden' name='index' value='" + String(i) + "'>";
-            html += "<input type='submit' value='Delete' class='btn btn-del'>";
-            html += "</form></td></tr>";
-        }
-        html += "</table>";
-    }
+    if (configMode) {
+        html += "<h1>LedMatrix MQTT Configuration</h1>";
 
-    // Add new network form
-    if (count < MAX_WIFI_NETWORKS) {
-        html += "<h2>Add Network</h2>";
-        html += "<form action='/add' method='POST'>";
-        html += "WiFi Network: <select name='ssid'><option value=''>-- Select --</option>";
-        for (int i = 0; i < numScannedSSIDs && i < 20; i++) {
-            html += "<option value='" + scannedSSIDs[i] + "'>" + scannedSSIDs[i] + "</option>";
-        }
-        html += "</select><br>";
-        html += "Or enter manually: <input type='text' name='manual_ssid' placeholder='SSID'><br>";
-        html += "Password: <input type='password' name='password'><br>";
-        html += "<input type='submit' value='Add Network' class='btn btn-add'>";
-        html += "</form>";
+        // Show current connection info
+        html += "<div class='info'>";
+        html += "<p><strong>Device Status</strong></p>";
+        html += "<p>IP Address: " + WiFi.localIP().toString() + "</p>";
+        html += "<p>WiFi: Connected to " + WiFi.SSID() + " (" + String(WiFi.RSSI()) + " dBm)</p>";
+        html += "</div>";
     } else {
-        html += "<p>Maximum number of networks (" + String(MAX_WIFI_NETWORKS) + ") reached. Delete one to add a new network.</p>";
+        html += "<h1>LedMatrix WiFi Setup</h1>";
+
+        // Show saved networks only in setup mode
+        int count = getNetworkCount();
+        if (count > 0) {
+            html += "<h2>Saved Networks</h2>";
+            html += "<table><tr><th>#</th><th>SSID</th><th>Action</th></tr>";
+            for (int i = 0; i < count; i++) {
+                String ssid, pass;
+                bool active;
+                loadNetworkCredentials(i, ssid, pass, active);
+                html += "<tr><td>" + String(i + 1) + "</td>";
+                html += "<td>" + ssid + (active ? "" : " (disabled)") + "</td>";
+                html += "<td><form action='/delete' method='POST' style='display:inline;'>";
+                html += "<input type='hidden' name='index' value='" + String(i) + "'>";
+                html += "<input type='submit' value='Delete' class='btn btn-del'>";
+                html += "</form></td></tr>";
+            }
+            html += "</table>";
+        }
+
+        // Add new network form (only in setup mode)
+        if (count < MAX_WIFI_NETWORKS) {
+            html += "<h2>Add Network</h2>";
+            html += "<form action='/add' method='POST'>";
+            html += "WiFi Network: <select name='ssid'><option value=''>-- Select --</option>";
+            for (int i = 0; i < numScannedSSIDs && i < 20; i++) {
+                html += "<option value='" + scannedSSIDs[i] + "'>" + scannedSSIDs[i] + "</option>";
+            }
+            html += "</select><br>";
+            html += "Or enter manually: <input type='text' name='manual_ssid' placeholder='SSID'><br>";
+            html += "Password: <input type='password' name='password'><br>";
+            html += "<input type='submit' value='Add Network' class='btn btn-add'>";
+            html += "</form>";
+        } else {
+            html += "<p>Maximum number of networks (" + String(MAX_WIFI_NETWORKS) + ") reached. Delete one to add a new network.</p>";
+        }
     }
 
-    // MQTT Configuration section
+    // MQTT Configuration section (always shown)
     html += "<h2>Home Assistant MQTT Configuration</h2>";
 
     // Check if MQTT is already configured
@@ -327,7 +360,7 @@ String ManualWifiSetup::generateHTML() {
     html += "</form>";
 
     html += "<p><small><strong>Note:</strong> Configure your Home Assistant MQTT broker first. ";
-    html += "After saving, the LED Matrix will appear as a 'Light' entity with multiple effects/modes.</small></p>";
+    html += "The LED Matrix will appear as a 'Light' entity with multiple effects/modes.</small></p>";
 
     html += "</body></html>";
     return html;

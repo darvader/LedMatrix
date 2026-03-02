@@ -148,6 +148,7 @@ char scrollingText[100] = "VSV Jena 90 e.V. : Gastmannschaft";
 
 
 ManualWifiSetup* wifiSetup;
+ManualWifiSetup* mqttConfigServer;
 bool inSetupMode = false;
 
 WiFiUDP Udp;
@@ -421,6 +422,10 @@ void setup() {
     if (!wifiSetup->connectToWifi()) {
       inSetupMode = true;
       wifiSetup->startSetup();
+    } else {
+      // Start MQTT config web server on port 8080 during normal operation
+      mqttConfigServer = new ManualWifiSetup(display, 8080);
+      mqttConfigServer->startConfigServer();
     }
   }
   setupFauxmo();
@@ -727,6 +732,7 @@ void myDelay(ulong millisecs) {
     homeAssistant.loop();
     ArduinoOTA.handle();
     if (inSetupMode) wifiSetup->handleClient();
+    if (mqttConfigServer) mqttConfigServer->handleClient();
     receiveUdp();
   }
 }
@@ -812,6 +818,13 @@ void loop() {
     }
   } else {
     myDelay(20);
+  }
+
+  // Check if MQTT reconnection is needed
+  if (mqttConfigServer && mqttConfigServer->isMqttReconnectNeeded()) {
+    Serial.println("MQTT config changed, reconnecting...");
+    homeAssistant.setup();
+    mqttConfigServer->clearMqttReconnectFlag();
   }
 
   // Publish state to Home Assistant every 30 seconds

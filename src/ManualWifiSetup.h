@@ -28,9 +28,10 @@ public:
 #else
         VirtualMatrixPanel* display
 #endif
-    );
+    , uint16_t port = 80);
     bool isConfigured();
     void startSetup();
+    void startConfigServer();
     void handleClient();
     bool connectToWifi();
     void saveCredentials(String ssid, String password);
@@ -41,6 +42,10 @@ public:
     bool loadNetworkCredentials(int index, String& ssid, String& password, bool& active);
     int getNetworkCount();
     bool deleteNetwork(int index);
+
+    // MQTT reconnect flag
+    bool isMqttReconnectNeeded() const { return mqttReconnectNeeded; }
+    void clearMqttReconnectFlag() { mqttReconnectNeeded = false; }
 
 private:
 #ifdef ESP8266
@@ -60,6 +65,8 @@ private:
     const int maxPassLen = 64;
     String scannedSSIDs[20];
     int numScannedSSIDs;
+    bool configMode = false; // false = setup mode (AP), true = config mode (station)
+    bool mqttReconnectNeeded = false;
 
     void handleRoot();
     void handleSave();
