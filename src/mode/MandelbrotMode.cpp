@@ -8,8 +8,8 @@ const float MandelbrotMode::TARGETS[][2] = {
     { -0.1700f,  1.0410f },  // Lightning
 };
 
-MandelbrotMode::MandelbrotMode(IDisplay* display)
-    : display_(display), zoom_(1.0),
+MandelbrotMode::MandelbrotMode(IDisplay* display, TimeService* timeService)
+    : display_(display), timeOverlay_(display, timeService), zoom_(1.0),
       targetX_(TARGETS[0][0]), targetY_(TARGETS[0][1]),
       zoomStartTime_(0), zoomDuration_(60000), targetZoom_(500.0),
       currentTarget_(0) {}
@@ -181,4 +181,6 @@ void MandelbrotMode::update() {
             display_->drawPixel(hx, hy, color);
         }
     }
+
+    timeOverlay_.drawTime();
 }

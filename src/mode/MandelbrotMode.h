@@ -4,12 +4,15 @@
 #include "IDisplayMode.h"
 #include "../display/IDisplay.h"
 #include "../util/Colors.h"
+#include "../util/TimeOverlay.h"
 #include "../app/Config.h"
 #include <stdint.h>
 
+class TimeService;
+
 class MandelbrotMode : public IDisplayMode {
 public:
-    explicit MandelbrotMode(IDisplay* display);
+    MandelbrotMode(IDisplay* display, TimeService* timeService);
 
     void init() override;
     void update() override;
@@ -34,6 +37,7 @@ private:
     static bool inCardioidOrBulb(int32_t cr, int32_t ci);
 
     IDisplay* display_;
+    TimeOverlay timeOverlay_;
 
     float zoom_;
     float targetX_;

@@ -149,7 +149,7 @@ void Application::createModes() {
     gameOfLifeMode_ = new GameOfLifeMode(display_, &timeService_);
     ellipseMode_ = new EllipseMode(display_, &timeService_, ellipseRenderer_);
     starWarsMode_ = new StarWarsMode(display_, &timeService_);
-    mandelbrotMode_ = new MandelbrotMode(display_);
+    mandelbrotMode_ = new MandelbrotMode(display_, &timeService_);
     timerMode_ = new TimerMode(display_);
     counterMode_ = new CounterMode(display_, &timeService_, ellipseRenderer_);
 
