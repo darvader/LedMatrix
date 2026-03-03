@@ -13,7 +13,7 @@ public:
     void init() override;
     void update() override;
     void cleanup() override;
-    uint16_t frameDelayMs() const override { return 20; }
+    uint16_t frameDelayMs() const override { return 0; }
 
     void resetZoom() { zoom_ = 1.0; zoomStartTime_ = millis(); }
 
@@ -21,6 +21,8 @@ public:
     static int computeIterations(float cr, float ci, int maxIterations);
 
 private:
+    void buildPalette();
+
     IDisplay* display_;
 
     float zoom_;
@@ -29,6 +31,12 @@ private:
     unsigned long zoomStartTime_;
     float zoomDuration_;
     float targetZoom_;
+    int currentTarget_;
+
+    uint16_t palette_[256];
+
+    static constexpr int NUM_TARGETS = 4;
+    static const float TARGETS[][2];
 };
 
 #endif // MANDELBROT_MODE_H
