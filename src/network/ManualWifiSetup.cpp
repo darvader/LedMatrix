@@ -7,7 +7,7 @@ ManualWifiSetup::ManualWifiSetup(
 #else
     VirtualMatrixPanel* disp
 #endif
-, uint16_t port) : display(disp), server(port) {
+, uint16_t port) : display(disp), server(port), numScannedSSIDs(0) {
 }
 
 bool ManualWifiSetup::isConfigured() {
@@ -37,6 +37,10 @@ void ManualWifiSetup::startSetup() {
     server.on("/save", HTTP_POST, std::bind(&ManualWifiSetup::handleSave, this));
     server.on("/add", HTTP_POST, std::bind(&ManualWifiSetup::handleAddNetwork, this));
     server.on("/delete", HTTP_POST, std::bind(&ManualWifiSetup::handleDeleteNetwork, this));
+    server.on("/api/status", HTTP_GET, std::bind(&ManualWifiSetup::handleApiStatus, this));
+    server.on("/api/networks", HTTP_GET, std::bind(&ManualWifiSetup::handleApiNetworks, this));
+    server.on("/api/wifi", HTTP_POST, std::bind(&ManualWifiSetup::handleApiWifi, this));
+    server.on("/api/wifi/delete", HTTP_POST, std::bind(&ManualWifiSetup::handleApiDeleteWifi, this));
     mqttConfig.attachToServer(server);
     server.begin();
 
@@ -47,6 +51,10 @@ void ManualWifiSetup::startConfigServer() {
     configMode = true;
     mqttConfig.setConfigMode(true);
     server.on("/", HTTP_GET, std::bind(&ManualWifiSetup::handleRoot, this));
+    server.on("/api/status", HTTP_GET, std::bind(&ManualWifiSetup::handleApiStatus, this));
+    server.on("/api/networks", HTTP_GET, std::bind(&ManualWifiSetup::handleApiNetworks, this));
+    server.on("/api/wifi", HTTP_POST, std::bind(&ManualWifiSetup::handleApiWifi, this));
+    server.on("/api/wifi/delete", HTTP_POST, std::bind(&ManualWifiSetup::handleApiDeleteWifi, this));
     mqttConfig.attachToServer(server);
     server.begin();
     Serial.println("Config server started on port 8080");
@@ -229,6 +237,121 @@ void ManualWifiSetup::handleDeleteNetwork() {
     } else {
         server.send(400, "text/html", "<h1>Error: Invalid network index</h1><a href='/'>Back</a>");
     }
+}
+
+void ManualWifiSetup::handleApiStatus() {
+    String json = "{";
+    json += "\"device\":\"LedMatrix\",";
+    json += "\"setupMode\":";
+    json += String(configMode ? "false" : "true");
+    json += ",";
+    json += "\"configured\":";
+    json += String(isConfigured() ? "true" : "false");
+    json += ",";
+    json += "\"networkCount\":";
+    json += String(getNetworkCount());
+    json += ",";
+    json += "\"ip\":\"";
+    json += WiFi.localIP().toString();
+    json += "\",";
+    json += "\"ssid\":\"";
+    json += jsonEscape(WiFi.SSID());
+    json += "\"";
+    json += "}";
+    server.send(200, "application/json", json);
+}
+
+void ManualWifiSetup::handleApiNetworks() {
+    String json = "{";
+    json += "\"scanned\":[";
+    for (int i = 0; i < numScannedSSIDs && i < 20; i++) {
+        if (i > 0) json += ",";
+        json += "{\"ssid\":\"";
+        json += jsonEscape(scannedSSIDs[i]);
+        json += "\",\"rssi\":";
+        json += String(WiFi.RSSI(i));
+        json += "}";
+    }
+    json += "],\"saved\":[";
+    int count = getNetworkCount();
+    bool firstSaved = true;
+    for (int i = 0; i < count; i++) {
+        String ssid, pass;
+        bool active;
+        if (!loadNetworkCredentials(i, ssid, pass, active)) continue;
+        if (!firstSaved) json += ",";
+        firstSaved = false;
+        json += "{\"index\":";
+        json += String(i);
+        json += ",\"ssid\":\"";
+        json += jsonEscape(ssid);
+        json += "\",\"active\":";
+        json += String(active ? "true" : "false");
+        json += "}";
+    }
+    json += "]}";
+    server.send(200, "application/json", json);
+}
+
+void ManualWifiSetup::handleApiWifi() {
+    if (!server.hasArg("ssid") || server.arg("ssid").length() == 0) {
+        server.send(400, "application/json", "{\"success\":false,\"error\":\"SSID is required\"}");
+        return;
+    }
+
+    String ssid = server.arg("ssid");
+    String password = server.hasArg("password") ? server.arg("password") : "";
+    bool replace = server.hasArg("replace") && server.arg("replace") == "true";
+    int count = getNetworkCount();
+    int index = replace ? 0 : count;
+
+    if (index >= MAX_WIFI_NETWORKS) {
+        server.send(400, "application/json", "{\"success\":false,\"error\":\"Maximum number of networks reached\"}");
+        return;
+    }
+
+    saveNetworkCredentials(index, ssid, password, true);
+    if (replace || count == 0) {
+        EEPROM.write(eepromNetworkCountAddr, 1);
+    } else {
+        EEPROM.write(eepromNetworkCountAddr, count + 1);
+    }
+    EEPROM.commit();
+
+    server.send(200, "application/json", "{\"success\":true,\"restarting\":true}");
+    delay(500);
+    ESP.restart();
+}
+
+void ManualWifiSetup::handleApiDeleteWifi() {
+    if (!server.hasArg("index")) {
+        server.send(400, "application/json", "{\"success\":false,\"error\":\"Network index is required\"}");
+        return;
+    }
+
+    if (deleteNetwork(server.arg("index").toInt())) {
+        server.send(200, "application/json", "{\"success\":true}");
+    } else {
+        server.send(400, "application/json", "{\"success\":false,\"error\":\"Invalid network index\"}");
+    }
+}
+
+String ManualWifiSetup::jsonEscape(const String& value) {
+    String escaped = "";
+    for (unsigned int i = 0; i < value.length(); i++) {
+        char c = value[i];
+        switch (c) {
+            case '"': escaped += "\\\""; break;
+            case '\\': escaped += "\\\\"; break;
+            case '\b': escaped += "\\b"; break;
+            case '\f': escaped += "\\f"; break;
+            case '\n': escaped += "\\n"; break;
+            case '\r': escaped += "\\r"; break;
+            case '\t': escaped += "\\t"; break;
+            default: escaped += c; break;
+        }
+    }
+    return escaped;
 }
 
 String ManualWifiSetup::generateHTML() {

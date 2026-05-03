@@ -72,7 +72,12 @@ private:
     void handleSave();
     void handleAddNetwork();
     void handleDeleteNetwork();
+    void handleApiStatus();
+    void handleApiNetworks();
+    void handleApiWifi();
+    void handleApiDeleteWifi();
     String generateHTML();
+    String jsonEscape(const String& value);
 };
 
 #endif
