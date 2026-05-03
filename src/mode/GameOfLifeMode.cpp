@@ -1,11 +1,79 @@
 #include "GameOfLifeMode.h"
 #include "../util/Colors.h"
 
+namespace {
+inline bool cellAt(uint8_t** grid, int x, int y) {
+    return (grid[x >> 3][y] & (1 << (x & 7))) != 0;
+}
+
+inline uint8_t countBits(uint8_t value) {
+    value = value - ((value >> 1) & 0x55);
+    value = (value & 0x33) + ((value >> 2) & 0x33);
+    return (value + (value >> 4)) & 0x0F;
+}
+
+inline uint8_t countNeighbors(uint8_t** grid, int x, int y, int gridX, int gridY) {
+    const int left = (x == 0) ? gridX - 1 : x - 1;
+    const int right = (x == gridX - 1) ? 0 : x + 1;
+    const int up = (y == 0) ? gridY - 1 : y - 1;
+    const int down = (y == gridY - 1) ? 0 : y + 1;
+
+    return (cellAt(grid, left, up) ? 1 : 0) +
+           (cellAt(grid, x, up) ? 1 : 0) +
+           (cellAt(grid, right, up) ? 1 : 0) +
+           (cellAt(grid, left, y) ? 1 : 0) +
+           (cellAt(grid, right, y) ? 1 : 0) +
+           (cellAt(grid, left, down) ? 1 : 0) +
+           (cellAt(grid, x, down) ? 1 : 0) +
+           (cellAt(grid, right, down) ? 1 : 0);
+}
+
+inline bool nextCellState(bool alive, uint8_t aliveNeighbors, int golType) {
+    if (alive) {
+        switch (golType) {
+            case 0:
+            case 1: return aliveNeighbors == 2 || aliveNeighbors == 3;
+            case 2: return aliveNeighbors >= 1 || aliveNeighbors <= 6;
+            case 3: return aliveNeighbors == 3;
+            case 4: return aliveNeighbors == 5;
+            case 5: return aliveNeighbors >= 3 && aliveNeighbors <= 6;
+            default: return aliveNeighbors == 2 || aliveNeighbors == 3;
+        }
+    }
+
+    switch (golType) {
+        case 0: return aliveNeighbors == 3;
+        case 1: return aliveNeighbors == 3 || aliveNeighbors == 6;
+        case 2: return aliveNeighbors == 3;
+        case 3: return aliveNeighbors == 3 || aliveNeighbors == 4;
+        case 4: return aliveNeighbors == 3;
+        case 5: return aliveNeighbors >= 3 && aliveNeighbors <= 8;
+        default: return aliveNeighbors == 2 || aliveNeighbors == 3;
+    }
+}
+
+inline uint8_t wave8(uint8_t phase) {
+    phase &= 0x3F;
+    return phase < 32 ? phase * 8 : (63 - phase) * 8;
+}
+
+inline uint16_t lifeColor(IDisplay* display, int x, int y, uint8_t aliveNeighbors,
+                          uint16_t generation) {
+    const uint8_t heat = aliveNeighbors * 24;
+    const uint8_t drift = static_cast<uint8_t>(generation + x * 3 + y * 5);
+    const uint8_t red = 48 + wave8(drift + heat);
+    const uint8_t green = 40 + wave8(drift + 21 + heat / 2);
+    const uint8_t blue = 56 + wave8(drift + 42 + (8 - aliveNeighbors) * 12);
+
+    return display->color565(red, green, blue);
+}
+}
+
 GameOfLifeMode::GameOfLifeMode(IDisplay* display, TimeService* timeService)
     : display_(display), timeService_(timeService),
       timeOverlay_(display, timeService),
       oldGrid_(nullptr), grid_(nullptr), newGrid_(nullptr),
-      initialized_(false), golType_(-1), startTime_(0) {}
+      initialized_(false), golType_(-1), generation_(0), startTime_(0) {}
 
 void GameOfLifeMode::init() {
     initialized_ = false;
@@ -69,16 +137,7 @@ void GameOfLifeMode::setCell(uint8_t** grid, uint8_t x, uint8_t y, bool value) {
 
 int GameOfLifeMode::countAliveNeighbors(uint8_t** grid, uint8_t x, uint8_t y,
                                          int gridX, int gridY) {
-    uint8_t count = 0;
-    for (int8_t i = -1; i <= 1; i++) {
-        for (int8_t j = -1; j <= 1; j++) {
-            if (i == 0 && j == 0) continue;
-            uint8_t nx = (x + i + gridX) % gridX;
-            uint8_t ny = (y + j + gridY) % gridY;
-            count += getCell(grid, nx, ny) ? 1 : 0;
-        }
-    }
-    return count;
+    return countNeighbors(grid, x, y, gridX, gridY);
 }
 
 void GameOfLifeMode::update() {
@@ -91,6 +150,7 @@ void GameOfLifeMode::update() {
         }
         golType_++;
         if (golType_ > 2) golType_ = 0;
+        generation_ = 0;
         startTime_ = millis();
         initialized_ = true;
     }
@@ -103,32 +163,21 @@ void GameOfLifeMode::update() {
 #ifdef ESP8266
         yield();
 #endif
-        for (int x = 0; x < GRIDX; x++) {
-            int aliveNeighbors = countAliveNeighbors(grid_, x, y, GRIDX, GRIDY);
-            if (getCell(grid_, x, y)) {
-                switch (golType_) {
-                    case 0: setCell(newGrid_, x, y, aliveNeighbors == 2 || aliveNeighbors == 3); break;
-                    case 1: setCell(newGrid_, x, y, aliveNeighbors == 2 || aliveNeighbors == 3); break;
-                    case 2: setCell(newGrid_, x, y, aliveNeighbors >= 1 || aliveNeighbors <= 6); break;
-                    case 3: setCell(newGrid_, x, y, aliveNeighbors == 3); break;
-                    case 4: setCell(newGrid_, x, y, aliveNeighbors == 5); break;
-                    case 5: setCell(newGrid_, x, y, aliveNeighbors >= 3 && aliveNeighbors <= 6); break;
-                    default: setCell(newGrid_, x, y, aliveNeighbors == 2 || aliveNeighbors == 3); break;
-                }
-            } else {
-                switch (golType_) {
-                    case 0: setCell(newGrid_, x, y, aliveNeighbors == 3); break;
-                    case 1: setCell(newGrid_, x, y, aliveNeighbors == 3 || aliveNeighbors == 6); break;
-                    case 2: setCell(newGrid_, x, y, aliveNeighbors == 3); break;
-                    case 3: setCell(newGrid_, x, y, aliveNeighbors == 3 || aliveNeighbors == 4); break;
-                    case 4: setCell(newGrid_, x, y, aliveNeighbors == 3); break;
-                    case 5: setCell(newGrid_, x, y, aliveNeighbors >= 3 && aliveNeighbors <= 8); break;
-                    default: setCell(newGrid_, x, y, aliveNeighbors == 2 || aliveNeighbors == 3); break;
+        for (int xByte = 0; xByte < GRIDX_BYTE; xByte++) {
+            const uint8_t currentByte = grid_[xByte][y];
+            uint8_t nextByte = 0;
+
+            for (int bit = 0; bit < 8; bit++) {
+                const int x = (xByte << 3) + bit;
+                const uint8_t aliveNeighbors = countNeighbors(grid_, x, y, GRIDX, GRIDY);
+
+                if (nextCellState((currentByte & (1 << bit)) != 0, aliveNeighbors, golType_)) {
+                    nextByte |= (1 << bit);
                 }
             }
-            if (getCell(oldGrid_, x, y) != getCell(newGrid_, x, y)) {
-                changes++;
-            }
+
+            newGrid_[xByte][y] = nextByte;
+            changes += countBits(oldGrid_[xByte][y] ^ nextByte);
         }
     }
 
@@ -157,10 +206,18 @@ void GameOfLifeMode::update() {
 #ifdef ESP8266
         yield();
 #endif
-        for (int x = 0; x < GRIDX; x++) {
-            display_->drawPixel(x, y, getCell(grid_, x, y) ? myCOLORS[countAliveNeighbors(grid_, x, y, GRIDX, GRIDY)] : myBLACK);
+        for (int xByte = 0; xByte < GRIDX_BYTE; xByte++) {
+            const uint8_t currentByte = grid_[xByte][y];
+            for (int bit = 0; bit < 8; bit++) {
+                const int x = (xByte << 3) + bit;
+                const uint16_t color = (currentByte & (1 << bit))
+                    ? lifeColor(display_, x, y, countNeighbors(grid_, x, y, GRIDX, GRIDY), generation_)
+                    : myBLACK;
+                display_->drawPixel(x, y, color);
+            }
         }
     }
 
+    generation_++;
     timeOverlay_.drawTimeWithBackground();
 }

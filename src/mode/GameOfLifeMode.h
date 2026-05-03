@@ -38,6 +38,7 @@ private:
 
     bool initialized_;
     int golType_;
+    uint16_t generation_;
     unsigned long startTime_;
 };
 
