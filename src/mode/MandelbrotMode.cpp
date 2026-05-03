@@ -182,5 +182,5 @@ void MandelbrotMode::update() {
         }
     }
 
-    timeOverlay_.drawTime();
+    timeOverlay_.drawTimeWithBackground();
 }
