@@ -27,6 +27,19 @@ public:
 private:
     void initializeGrids();
     void freeGrids();
+    void seedNewWorld();
+    void clearWorld();
+    void initializeVisualStateFromGrid();
+    void placePattern(const int8_t pattern[][2], uint8_t count, int originX, int originY,
+                      uint8_t transform);
+    void placePulsar(int originX, int originY, uint8_t transform);
+    void addRandomPocket(int centerX, int centerY, uint8_t radiusX, uint8_t radiusY,
+                         uint8_t densityPercent);
+    void seedGliderClusters();
+    void seedOscillatorField();
+    void seedSymmetricChaos();
+    void seedSparseNebula();
+    void seedCollisionCluster();
 
     IDisplay* display_;
     TimeService* timeService_;
@@ -35,9 +48,12 @@ private:
     uint8_t** oldGrid_;
     uint8_t** grid_;
     uint8_t** newGrid_;
+    uint8_t* ageGrid_;
+    uint8_t* fadeGrid_;
 
     bool initialized_;
     int golType_;
+    uint8_t paletteTheme_;
     uint16_t generation_;
     unsigned long startTime_;
 };
