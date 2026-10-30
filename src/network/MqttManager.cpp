@@ -4,9 +4,9 @@
 const char* MqttManager::haModeNames_[] = {
     "Scoreboard", "Clock 1", "Clock 2", "Clock 3", "Clock 4",
     "Snow", "Plasma", "Colored Snow", "Game of Life",
-    "Ellipse", "Star Wars", "Timer", "Counter", "Mandelbrot"
+    "Ellipse", "Star Wars", "Halloween", "Timer", "Counter", "Mandelbrot"
 };
-const int MqttManager::haModeValues_[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 30, 40, 60};
+const int MqttManager::haModeValues_[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 30, 40, 60};
 const int MqttManager::haNumModes_ = sizeof(haModeValues_) / sizeof(haModeValues_[0]);
 
 // Static instance pointer for callbacks (HomeAssistantMQTT uses raw function pointers)

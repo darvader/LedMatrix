@@ -16,6 +16,7 @@
 class ScoreboardMode;
 class ClockMode;
 class SnowMode;
+class HalloweenMode;
 class PlasmaMode;
 class GameOfLifeMode;
 class EllipseMode;
@@ -63,6 +64,7 @@ private:
     ClockMode* clockMode4_;
     SnowMode* snowMode_;
     SnowMode* coloredSnowMode_;
+    HalloweenMode* halloweenMode_;
     PlasmaMode* plasmaMode_;
     GameOfLifeMode* gameOfLifeMode_;
     EllipseMode* ellipseMode_;

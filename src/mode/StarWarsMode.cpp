@@ -1,4 +1,5 @@
 #include "StarWarsMode.h"
+#include <new>
 
 StarWarsMode::StarWarsMode(IDisplay* display, TimeService* timeService)
     : display_(display), timeOverlay_(display, timeService),
@@ -24,7 +25,25 @@ void StarWarsMode::update() {
 
     if (!initialized_) {
         if (stars_ == nullptr) {
-            stars_ = new star_t[NUM_STARS];
+#ifdef ESP8266
+            // The WiFi SDK also allocates while processing received packets.
+            constexpr size_t networkReserve = 6144;
+            const size_t starBytes = sizeof(star_t) * NUM_STARS;
+            if (ESP.getFreeHeap() < starBytes + networkReserve ||
+                ESP.getMaxFreeBlockSize() < starBytes) {
+                display_->showBuffer();
+                display_->clearScreen();
+                timeOverlay_.drawTimeWithBackground();
+                return;
+            }
+#endif
+            stars_ = new (std::nothrow) star_t[NUM_STARS];
+            if (stars_ == nullptr) {
+                display_->showBuffer();
+                display_->clearScreen();
+                timeOverlay_.drawTimeWithBackground();
+                return;
+            }
         }
         for (int i = 0; i < NUM_STARS; i++) {
             stars_[i].x = random(-width, width);

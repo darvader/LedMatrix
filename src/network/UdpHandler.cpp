@@ -27,10 +27,13 @@ void UdpHandler::receive() {
     int packetSize = udp_.parsePacket();
     if (!packetSize) return;
 
-    int len = udp_.read(incomingPacket_, 255);
-    if (len > 0) {
-        incomingPacket_[len] = 0;
+    if (packetSize > static_cast<int>(sizeof(incomingPacket_) - 1)) {
+        udp_.flush();
+        return;
     }
+    int len = udp_.read(incomingPacket_, sizeof(incomingPacket_) - 1);
+    if (len <= 0) return;
+    incomingPacket_[len] = 0;
 
     Command cmd = CommandParser::parse(incomingPacket_, len);
 
@@ -39,16 +42,18 @@ void UdpHandler::receive() {
         return;
     }
 
-    executor_->execute(cmd);
-
-    // Handle picture data if in picture mode (mode 20)
+    // Unrecognized commands are not complete RGB frames and must not be read as one.
     if (cmd.type == CommandType::Unknown) {
-        // Could be picture data
-        handlePicture();
+        Serial.printf("Ignoring unknown UDP command (%d bytes)\n", len);
+        return;
     }
+    executor_->execute(cmd);
 }
 
 void UdpHandler::handleDetect() {
+#ifdef ESP8266
+    Serial.printf("Detect heap: free=%u largest=%u\n", ESP.getFreeHeap(), ESP.getMaxFreeBlockSize());
+#endif
     masterIp_ = udp_.remoteIP();
     udp_.beginPacket(masterIp_, UDP_REPLY_PORT);
     udp_.write(replyPacket, sizeof(replyPacket));
@@ -69,18 +74,4 @@ void UdpHandler::handleDetect() {
     }
     display_->showBuffer();
     display_->clearScreen();
-}
-
-void UdpHandler::handlePicture() {
-    int i = 0;
-    for (int x = 0; x < MATRIX_WIDTH; x++) {
-        yield();
-        for (int y = 0; y < MATRIX_HEIGHT; y++) {
-            uint8_t r = incomingPacket_[i++];
-            uint8_t g = incomingPacket_[i++];
-            uint8_t b = incomingPacket_[i++];
-            display_->drawPixelRGB888(x, y, r, g, b);
-        }
-    }
-    display_->showBuffer();
 }

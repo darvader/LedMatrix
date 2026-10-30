@@ -3,6 +3,7 @@
 #include "../mode/ScoreboardMode.h"
 #include "../mode/ClockMode.h"
 #include "../mode/SnowMode.h"
+#include "../mode/HalloweenMode.h"
 #include "../mode/PlasmaMode.h"
 #include "../mode/GameOfLifeMode.h"
 #include "../mode/EllipseMode.h"
@@ -39,6 +40,7 @@ Application::Application()
       scoreboardMode_(nullptr), clockMode1_(nullptr), clockMode2_(nullptr),
       clockMode3_(nullptr), clockMode4_(nullptr),
       snowMode_(nullptr), coloredSnowMode_(nullptr),
+      halloweenMode_(nullptr),
       plasmaMode_(nullptr), gameOfLifeMode_(nullptr),
       ellipseMode_(nullptr), starWarsMode_(nullptr),
       mandelbrotMode_(nullptr), timerMode_(nullptr), counterMode_(nullptr),
@@ -53,6 +55,7 @@ Application::~Application() {
     delete clockMode4_;
     delete snowMode_;
     delete coloredSnowMode_;
+    delete halloweenMode_;
     delete plasmaMode_;
     delete gameOfLifeMode_;
     delete ellipseMode_;
@@ -145,6 +148,7 @@ void Application::createModes() {
     clockMode4_ = new ClockMode(display_, &timeService_, 4);
     snowMode_ = new SnowMode(display_, &timeService_, false);
     coloredSnowMode_ = new SnowMode(display_, &timeService_, true);
+    halloweenMode_ = new HalloweenMode(display_, &timeService_);
     plasmaMode_ = new PlasmaMode(display_, &timeService_);
     gameOfLifeMode_ = new GameOfLifeMode(display_, &timeService_);
     ellipseMode_ = new EllipseMode(display_, &timeService_, ellipseRenderer_);
@@ -164,6 +168,7 @@ void Application::createModes() {
     modeManager_.registerMode(9, gameOfLifeMode_);
     modeManager_.registerMode(11, ellipseMode_);
     modeManager_.registerMode(12, starWarsMode_);
+    modeManager_.registerMode(13, halloweenMode_);
     modeManager_.registerMode(30, timerMode_);
     modeManager_.registerMode(40, counterMode_);
     modeManager_.registerMode(60, mandelbrotMode_);
@@ -195,9 +200,12 @@ void Application::setup() {
     mqttManager_ = new MqttManager(&modeManager_, display_);
     mqttManager_->setup();
 
-    // Set mode change callback to publish to MQTT
+    // Keep the selected mode across restarts; MQTT publishes it periodically.
     modeManager_.setModeChangeCallback([](int newMode) {
-        // Mode change notification handled in MQTT periodic update
+        if (EEPROM.read(EEPROM_MODE_ADDR) != newMode) {
+            EEPROM.write(EEPROM_MODE_ADDR, newMode);
+            EEPROM.commit();
+        }
     });
 
     cmdExecutor_ = new CommandExecutor(&modeManager_, scoreboardMode_,
@@ -211,6 +219,7 @@ void Application::setup() {
     timeService_.begin();
 
     setupEEPROM();
+    Serial.printf("Restored display mode: %d\n", modeManager_.getMode());
 
     // Log memory
 #ifdef ESP32
@@ -250,9 +259,8 @@ void Application::loop() {
 #endif
 
     if (wifiManager_->isInSetupMode()) {
-        display_->showBuffer();
-        display_->clearScreen();
-        scoreboardMode_->update(); // shows scrolling text
+        // ScoreboardMode owns the buffer swap and clear, including in WiFi setup.
+        scoreboardMode_->update(); // shows scrolling setup instructions
         wifiManager_->handleClient();
         processEvents(10);
         return;

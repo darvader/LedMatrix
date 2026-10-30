@@ -48,6 +48,7 @@ The device can display the current time with various animated backgrounds:
 
 - **Time Sample 1-4**: Different time display styles
 - **Snow Animation**: Falling snow effect (white or colored)
+- **Halloween**: Floating 7x8 ghosts that blink and fade, flocks of small bats, flickering pumpkins that wink, twinkling stars, a crescent moon, and eyes peeking out of the dark. A larger spider with moving legs crawls down to a random depth, pauses, then climbs out and reappears at a random horizontal position. Slow violet ground fog drifts between the pumpkins. A witch on a broom and a ghost chasing a bat appear in alternating short scenes, separated by random quiet intervals. Animations can move behind the clock, which stays readable on both 64x32 and 128x64 matrices. Select **Halloween** in Home Assistant or send the UDP text command `timeHalloween` to port `4210` (mode ID `13`). The selected mode is restored after a restart.
 - **Plasma**: Animated plasma effect
 - **Game of Life**: Conway's Game of Life simulation
 - **Ellipse**: Animated ellipses

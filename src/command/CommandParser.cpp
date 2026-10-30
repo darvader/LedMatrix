@@ -80,6 +80,9 @@ Command CommandParser::parse(const char* packet, int len) {
     } else if (std::strcmp(packet, "timeStarWars") == 0) {
         cmd.type = CommandType::SetMode;
         cmd.intValue = 12;
+    } else if (std::strcmp(packet, "timeHalloween") == 0) {
+        cmd.type = CommandType::SetMode;
+        cmd.intValue = 13;
     } else if (std::strcmp(packet, "scoreboard") == 0) {
         cmd.type = CommandType::Scoreboard;
     } else if (std::strcmp(packet, "mandelbrot") == 0) {

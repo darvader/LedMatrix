@@ -20,12 +20,11 @@ public:
 
 private:
     void handleDetect();
-    void handlePicture();
 
     WiFiUDP udp_;
     CommandExecutor* executor_;
     IDisplay* display_;
-    char incomingPacket_[255];
+    char incomingPacket_[256]; // 255 command bytes plus the terminating null
     IPAddress masterIp_;
 };
 

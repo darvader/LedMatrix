@@ -29,7 +29,11 @@ private:
 
     star_t* stars_;
     bool initialized_;
+#ifdef ESP8266
+    static const int NUM_STARS = 100;
+#else
     static const int NUM_STARS = 500;
+#endif
 };
 
 #endif // STAR_WARS_MODE_H
